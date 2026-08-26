@@ -31,8 +31,10 @@ namespace apiprojnew.Common
             {
                 try
                 {
-                    // Check for Resend API Key in environment or config
-                    var apiKey = _configuration["Resend:ApiKey"] ?? _configuration["ResendApiKey"];
+                    var apiKey = _configuration["Resend:ApiKey"] 
+                              ?? _configuration["ResendApiKey"] 
+                              ?? _configuration["Resend__ApiKey"] 
+                              ?? _configuration["RESEND_API_KEY"];
 
                     if (string.IsNullOrEmpty(apiKey) || apiKey.Contains("YOUR_"))
                     {
