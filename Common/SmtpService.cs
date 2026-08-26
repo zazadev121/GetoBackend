@@ -61,7 +61,10 @@ namespace apiprojnew.Common
                             { "template_params", new
                                 {
                                     to_email = email,
+                                    email = email,
+                                    user_email = email,
                                     recipient = email,
+                                    to_name = email,
                                     code = code,
                                     passcode = code,
                                     time = "10 minutes",
