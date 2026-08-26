@@ -45,26 +45,39 @@ namespace apiprojnew.Common
                                        ?? _configuration["EmailJs__PublicKey"]
                                        ?? "QQWzdMHl281Ejhe-A";
 
+                    var emailJsPrivateKey = _configuration["EmailJs:PrivateKey"] 
+                                        ?? _configuration["EmailJsPrivateKey"] 
+                                        ?? _configuration["EmailJs__PrivateKey"]
+                                        ?? _configuration["EmailJsPrivateKey"];
+
                     // 1. Try EmailJS API if PublicKey is provided
                     if (!string.IsNullOrEmpty(emailJsPublicKey))
                     {
-                        var emailJsPayload = new
+                        var emailJsPayload = new Dictionary<string, object>
                         {
-                            service_id = emailJsServiceId.Trim(),
-                            template_id = emailJsTemplateId.Trim(),
-                            user_id = emailJsPublicKey.Trim(),
-                            template_params = new
-                            {
-                                to_email = email,
-                                recipient = email,
-                                code = code,
-                                passcode = code,
-                                time = "10 minutes",
-                                subject = subject
+                            { "service_id", emailJsServiceId.Trim() },
+                            { "template_id", emailJsTemplateId.Trim() },
+                            { "user_id", emailJsPublicKey.Trim() },
+                            { "template_params", new
+                                {
+                                    to_email = email,
+                                    recipient = email,
+                                    code = code,
+                                    passcode = code,
+                                    time = "10 minutes",
+                                    subject = subject
+                                }
                             }
                         };
 
+                        if (!string.IsNullOrEmpty(emailJsPrivateKey))
+                        {
+                            emailJsPayload["accessToken"] = emailJsPrivateKey.Trim();
+                        }
+
                         var emailJsRequest = new HttpRequestMessage(HttpMethod.Post, "https://api.emailjs.com/api/v1.0/email/send");
+                        emailJsRequest.Headers.Add("Origin", "https://dashboard.emailjs.com");
+                        emailJsRequest.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
                         emailJsRequest.Content = new StringContent(JsonSerializer.Serialize(emailJsPayload), Encoding.UTF8, "application/json");
 
                         _logger.LogInformation($"[EmailJS API] Sending email via service '{emailJsServiceId}' to {email}...");
