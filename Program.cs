@@ -29,12 +29,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:4200",
-                "http://localhost:3000",
-                "http://localhost:5173",
-                "https://geto-frontend-fcq51yzdv-zazadev121s-projects.vercel.app"
-              )
+        policy.SetIsOriginAllowed(origin => true)
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
