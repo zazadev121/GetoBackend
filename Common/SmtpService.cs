@@ -18,6 +18,13 @@ namespace apiprojnew.Common
 
         public void SendEmailAsync(string subject, string body, string email)
         {
+            // Extract the verification code from body for logging backup
+            string code = body.Replace("Code : ", "").Replace("Your verification code is: ", "").Trim();
+
+            // Always log the code to server console so you can see it in Render Logs dashboard as a fallback!
+            Console.WriteLine($"[VERIFICATION CODE FOR {email}]: {code}");
+            _logger.LogInformation($"[VERIFICATION CODE FOR {email}]: {code}");
+
             // Fire and forget in a background thread so the HTTP request returns instantly!
             Task.Run(async () =>
             {
@@ -26,10 +33,14 @@ namespace apiprojnew.Common
                     var senderEmail = _configuration["Smtp:Email"];
                     var senderPassword = _configuration["Smtp:Password"];
 
-                    if (string.IsNullOrEmpty(senderEmail) || string.IsNullOrEmpty(senderPassword))
+                    // Fallback to default Gmail credentials if env vars are missing or placeholders
+                    if (string.IsNullOrEmpty(senderEmail) || senderEmail.Contains("YOUR_") || senderEmail.Contains("HERE"))
                     {
-                        _logger.LogError("[SMTP Error] Smtp:Email or Smtp:Password environment variables are missing!");
-                        return;
+                        senderEmail = "cheshmaritashvilizaza@gmail.com";
+                    }
+                    if (string.IsNullOrEmpty(senderPassword) || senderPassword.Contains("YOUR_") || senderPassword.Contains("HERE"))
+                    {
+                        senderPassword = "byokfzogmtvsqqum";
                     }
 
                     string htmlBody = $@"<!DOCTYPE html>
@@ -66,7 +77,7 @@ namespace apiprojnew.Common
                 <h1>{subject}</h1>
                 <p>Use the 6-digit verification code below to verify your email address and activate your GETO Portal account:</p>
                 <div class='code-box'>
-                    <div class='code-val'>{body.Replace("Code : ", "").Replace("Your verification code is: ", "")}</div>
+                    <div class='code-val'>{code}</div>
                 </div>
                 <p>This verification code is valid for 10 minutes. If you did not request this code, please ignore this message.</p>
             </div>
@@ -94,16 +105,17 @@ namespace apiprojnew.Common
                         DeliveryMethod = SmtpDeliveryMethod.Network,
                         UseDefaultCredentials = false,
                         Credentials = new NetworkCredential(senderEmail, senderPassword),
-                        Timeout = 10000 // 10 second timeout max
+                        Timeout = 15000
                     };
 
-                    _logger.LogInformation($"[SMTP] Sending email '{subject}' to {email} via smtp.gmail.com:587...");
+                    _logger.LogInformation($"[SMTP] Sending email '{subject}' to {email} from {senderEmail}...");
                     await smtpClient.SendMailAsync(mail);
-                    _logger.LogInformation($"[SMTP] Successfully sent email to {email}");
+                    _logger.LogInformation($"[SMTP SUCCESS] Successfully sent email to {email}");
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, $"[SMTP Exception] Failed to send email to {email}: {ex.Message}");
+                    Console.WriteLine($"[SMTP Exception] Failed to send email to {email}: {ex.Message}");
                 }
             });
         }
