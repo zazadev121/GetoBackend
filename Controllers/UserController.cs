@@ -32,6 +32,13 @@ namespace apiprojnew.Controllers
             var response = _UserInterface.VerifyEmail(request);
             return StatusCode(response.StatusCode, response);
         }
+
+        [HttpPost("ResendCode/{email}")]
+        public IActionResult ResendCode(string email)
+        {
+            var response = _UserInterface.ResendVerificationCode(email);
+            return StatusCode(response.StatusCode, response);
+        }
         [HttpPost("ForgotPassword/{Email}")]
         public IActionResult ForgotPassword(string Email)
 

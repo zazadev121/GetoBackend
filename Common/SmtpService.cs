@@ -1,24 +1,38 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Mail;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace apiprojnew.Common
 {
     public class SmtpService
     {
         private readonly IConfiguration _configuration;
+        private readonly ILogger<SmtpService> _logger;
 
-        public SmtpService(IConfiguration configuration)
+        public SmtpService(IConfiguration configuration, ILogger<SmtpService> logger)
         {
             _configuration = configuration;
+            _logger = logger;
         }
 
-        public void SendEmail(string subject, string body, string email)
+        public void SendEmailAsync(string subject, string body, string email)
         {
-            var senderEmail = _configuration["Smtp:Email"];
-            var senderPassword = _configuration["Smtp:Password"];
+            // Fire and forget in a background thread so the HTTP request returns instantly!
+            Task.Run(async () =>
+            {
+                try
+                {
+                    var senderEmail = _configuration["Smtp:Email"];
+                    var senderPassword = _configuration["Smtp:Password"];
 
-            string htmlBody = $@"<!DOCTYPE html>
+                    if (string.IsNullOrEmpty(senderEmail) || string.IsNullOrEmpty(senderPassword))
+                    {
+                        _logger.LogError("[SMTP Error] Smtp:Email or Smtp:Password environment variables are missing!");
+                        return;
+                    }
+
+                    string htmlBody = $@"<!DOCTYPE html>
 <html lang='en'>
 <head>
     <meta charset='UTF-8' />
@@ -27,158 +41,71 @@ namespace apiprojnew.Common
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{ 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: #0f172a;
             padding: 20px;
-            min-height: 100vh;
+            color: #f8fafc;
         }}
-        .wrapper {{ 
-            max-width: 600px; 
-            margin: 0 auto;
-        }}
-        .container {{ 
-            background: #ffffff; 
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }}
-        .header {{ 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 40px 30px;
-            text-align: center;
-            color: #ffffff;
-        }}
-        .logo {{ 
-            font-size: 28px; 
-            font-weight: 700; 
-            letter-spacing: -0.5px;
-            margin-bottom: 8px;
-        }}
-        .tagline {{ 
-            font-size: 14px; 
-            opacity: 0.9;
-            font-weight: 300;
-            letter-spacing: 1px;
-        }}
-        .content {{ 
-            padding: 40px 30px;
-            color: #2d3748;
-        }}
-        .content h1 {{ 
-            font-size: 24px; 
-            font-weight: 600;
-            margin-bottom: 16px;
-            color: #1a202c;
-        }}
-        .content p {{ 
-            font-size: 15px;
-            line-height: 1.6;
-            color: #4a5568;
-            margin-bottom: 24px;
-        }}
-        .code-section {{ 
-            background: #f7fafc;
-            border-left: 4px solid #667eea;
-            padding: 24px;
-            border-radius: 8px;
-            margin: 30px 0;
-            text-align: center;
-        }}
-        .code-label {{ 
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            color: #718096;
-            margin-bottom: 12px;
-            display: block;
-        }}
-        .code-value {{ 
-            font-size: 36px;
-            font-weight: 700;
-            color: #667eea;
-            letter-spacing: 4px;
-            font-family: 'Courier New', monospace;
-        }}
-        .footer-text {{ 
-            font-size: 13px;
-            color: #718096;
-            line-height: 1.6;
-            margin-top: 24px;
-            padding-top: 24px;
-            border-top: 1px solid #e2e8f0;
-        }}
-        .footer {{ 
-            padding: 24px 30px;
-            background: #f7fafc;
-            border-top: 1px solid #e2e8f0;
-            text-align: center;
-            font-size: 12px;
-            color: #a0aec0;
-        }}
-        .divider {{ 
-            height: 1px; 
-            background: #e2e8f0; 
-            margin: 20px 0;
-        }}
-        @media only screen and (max-width: 600px) {{ 
-            .container {{ border-radius: 8px; }}
-            .header {{ padding: 30px 20px; }}
-            .content {{ padding: 30px 20px; }}
-            .content h1 {{ font-size: 20px; }}
-            .code-value {{ font-size: 28px; letter-spacing: 2px; }}
-            .footer {{ padding: 20px; }}
-        }}
+        .wrapper {{ max-width: 600px; margin: 0 auto; }}
+        .container {{ background: #1e293b; border-radius: 16px; border: 1px solid #334155; overflow: hidden; padding: 32px; }}
+        .header {{ text-align: center; margin-bottom: 24px; }}
+        .logo {{ font-size: 28px; font-weight: 800; color: #3b82f6; }}
+        .content h1 {{ font-size: 20px; font-weight: 700; color: #ffffff; margin-bottom: 12px; }}
+        .content p {{ font-size: 14px; color: #94a3b8; line-height: 1.6; margin-bottom: 20px; }}
+        .code-box {{ background: #090d16; border: 2px dashed #3b82f6; padding: 20px; border-radius: 12px; text-align: center; margin: 24px 0; }}
+        .code-val {{ font-size: 32px; font-weight: 800; color: #60a5fa; letter-spacing: 6px; font-mono: monospace; }}
+        .footer {{ text-align: center; font-size: 12px; color: #64748b; margin-top: 24px; border-top: 1px solid #334155; padding-top: 16px; }}
     </style>
 </head>
 <body>
     <div class='wrapper'>
         <div class='container'>
             <div class='header'>
-                <div class='logo'>Geto Project</div>
-                <div class='tagline'>Account Security</div>
+                <div class='logo'>GETO Project</div>
             </div>
-            
             <div class='content'>
                 <h1>{subject}</h1>
-                <p>Hi there,</p>
-                <p>We're excited to have you on board! To complete your registration and secure your account, please use the verification code below.</p>
-                
-                <div class='code-section'>
-                    <span class='code-label'>Your Verification Code</span>
-                    <div class='code-value'>{body.Replace("Code : ", "").Replace("Your verification code is: ", "")}</div>
+                <p>Use the 6-digit verification code below to verify your email address and activate your GETO Portal account:</p>
+                <div class='code-box'>
+                    <div class='code-val'>{body.Replace("Code : ", "").Replace("Your verification code is: ", "")}</div>
                 </div>
-                
-                <p>This code will expire in 10 minutes. If you didn't request this verification, please ignore this email.</p>
-                
-                <div class='footer-text'>
-                    <strong>Need help?</strong> If you have any questions, feel free to reach out to our support team.
-                </div>
+                <p>This verification code is valid for 10 minutes. If you did not request this code, please ignore this message.</p>
             </div>
-            
             <div class='footer'>
-                <p>© 2026 Geto Project. All rights reserved.<br>
-                This is an automated message, please don't reply directly to this email.</p>
+                <p>&copy; 2026 GETO Project. All rights reserved.</p>
             </div>
         </div>
     </div>
 </body>
 </html>";
 
-            using var mail = new MailMessage();
-            mail.From = new MailAddress(senderEmail, "Geto Project");
-            mail.IsBodyHtml = true;
-            mail.Subject = subject;
-            mail.To.Add(email);
-            mail.Body = htmlBody;
+                    using var mail = new MailMessage
+                    {
+                        From = new MailAddress(senderEmail, "GETO Project"),
+                        Subject = subject,
+                        Body = htmlBody,
+                        IsBodyHtml = true
+                    };
+                    mail.To.Add(email);
 
-            using var smtpClient = new SmtpClient("smtp.gmail.com")
-            {
-                Port = 587,
-                EnableSsl = true,
-                Credentials = new NetworkCredential(senderEmail, senderPassword),
-            };
+                    using var smtpClient = new SmtpClient("smtp.gmail.com")
+                    {
+                        Port = 587,
+                        EnableSsl = true,
+                        DeliveryMethod = SmtpDeliveryMethod.Network,
+                        UseDefaultCredentials = false,
+                        Credentials = new NetworkCredential(senderEmail, senderPassword),
+                        Timeout = 10000 // 10 second timeout max
+                    };
 
-            smtpClient.Send(mail);
+                    _logger.LogInformation($"[SMTP] Sending email '{subject}' to {email} via smtp.gmail.com:587...");
+                    await smtpClient.SendMailAsync(mail);
+                    _logger.LogInformation($"[SMTP] Successfully sent email to {email}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"[SMTP Exception] Failed to send email to {email}: {ex.Message}");
+                }
+            });
         }
     }
 }

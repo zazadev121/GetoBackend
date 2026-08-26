@@ -10,6 +10,7 @@ namespace apiprojnew.Services.Users
         public Result<string> VerifyEmail(EmailVerifyDTO req);
         public Result<string> ResetPassword(ResetPasswordDTO req);
         public Result<string> ForgotPassword(string Email);
+        public Result<string> ResendVerificationCode(string email);
         public Result<UserWithDocumentsDTO> GetProfile(int userId);
     }
 }

@@ -34,7 +34,7 @@ namespace apiprojnew.Services.Users
 
             user.VerifyCode = code.ToString();
             _db.SaveChanges();
-            _smtpService.SendEmail("Password Reset Code", $"Code : {user.VerifyCode}", user.Email);
+            _smtpService.SendEmailAsync("Password Reset Code", $"Code : {user.VerifyCode}", user.Email);
             return Result<string>.Ok("Email Sent");
 
         }
@@ -104,7 +104,7 @@ namespace apiprojnew.Services.Users
             };
             _db.Users.Add(user);
             _db.SaveChanges();
-            _smtpService.SendEmail("Verify your email", $"Your verification code is: {Code}", user.Email);
+            _smtpService.SendEmailAsync("Verify your email", $"Your verification code is: {Code}", user.Email);
             return Result<int>.Ok(user.Id);
         }
 
@@ -139,6 +139,27 @@ namespace apiprojnew.Services.Users
             _db.SaveChanges();
             var token = GenerateJwtToken(user);
             return Result<string>.Ok(token);
+        }
+
+        public Result<string> ResendVerificationCode(string email)
+        {
+            var user = _db.Users.FirstOrDefault(u => u.Email.ToLower() == email.ToLower());
+            if (user == null)
+            {
+                return Result<string>.NotFound("User with this email not found.");
+            }
+            if (user.IsVerified)
+            {
+                return Result<string>.BadRequest("This account is already verified. You can log in directly.");
+            }
+
+            Random ran = new Random();
+            string code = ran.Next(100_000, 999_999).ToString();
+            user.VerifyCode = code;
+            _db.SaveChanges();
+
+            _smtpService.SendEmailAsync("Verify your email", $"Your verification code is: {code}", user.Email);
+            return Result<string>.Ok("Verification code sent to your email.");
         }
 
         public Result<UserWithDocumentsDTO> GetProfile(int userId)
