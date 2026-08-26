@@ -1,0 +1,40 @@
+## .NET / C#
+bin/
+obj/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+*.csproj.user
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+## NuGet
+*.nupkg
+**/packages/*
+*.nuget.props
+*.nuget.targets
+
+## IDE
+.vs/
+.vscode/
+*.swp
+*~
+
+## OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+## Secrets / local config
+appsettings.Development.json
+*.pfx
+*.p12
+
+## Uploads (user data)
+uploads/
