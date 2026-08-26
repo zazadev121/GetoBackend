@@ -30,43 +30,53 @@ namespace apiprojnew.Common
             {
                 try
                 {
-                    var brevoKey = _configuration["Brevo:ApiKey"] 
-                                ?? _configuration["BrevoApiKey"] 
-                                ?? _configuration["Brevo__ApiKey"] 
-                                ?? _configuration["BREVO_API_KEY"];
+                    var emailJsServiceId = _configuration["EmailJs:ServiceId"] 
+                                       ?? _configuration["EmailJsServiceId"] 
+                                       ?? _configuration["EmailJs__ServiceId"] 
+                                       ?? "service_oejpd6v";
 
-                    var resendKey = _configuration["Resend:ApiKey"] 
-                                 ?? _configuration["ResendApiKey"] 
-                                 ?? _configuration["Resend__ApiKey"] 
-                                 ?? _configuration["RESEND_API_KEY"];
+                    var emailJsTemplateId = _configuration["EmailJs:TemplateId"] 
+                                        ?? _configuration["EmailJsTemplateId"] 
+                                        ?? _configuration["EmailJs__TemplateId"];
 
-                    string htmlBody = $@"<!DOCTYPE html>
-<html lang='en'>
-<head>
-    <meta charset='UTF-8' />
-    <meta name='viewport' content='width=device-width, initial-scale=1.0' />
-    <style>
-        body {{ font-family: sans-serif; background: #0f172a; padding: 20px; color: #f8fafc; }}
-        .container {{ background: #1e293b; border-radius: 16px; border: 1px solid #334155; padding: 32px; max-width: 500px; margin: 0 auto; }}
-        .logo {{ font-size: 24px; font-weight: 800; color: #3b82f6; text-align: center; margin-bottom: 20px; }}
-        .code-box {{ background: #090d16; border: 2px dashed #3b82f6; padding: 20px; border-radius: 12px; text-align: center; margin: 20px 0; }}
-        .code-val {{ font-size: 32px; font-weight: 800; color: #60a5fa; letter-spacing: 6px; }}
-    </style>
-</head>
-<body>
-    <div class='container'>
-        <div class='logo'>GETO Project</div>
-        <h2 style='color: #ffffff;'>{subject}</h2>
-        <p style='color: #94a3b8;'>Use the verification code below to complete your account security check:</p>
-        <div class='code-box'>
-            <div class='code-val'>{code}</div>
-        </div>
-        <p style='color: #64748b; font-size: 12px;'>Valid for 10 minutes. If you did not request this code, please ignore.</p>
-    </div>
-</body>
-</html>";
+                    var emailJsPublicKey = _configuration["EmailJs:PublicKey"] 
+                                       ?? _configuration["EmailJsPublicKey"] 
+                                       ?? _configuration["EmailJs__PublicKey"];
 
-                    // 1. Try Brevo HTTP API (Sends to ANY email address for free!)
+                    // 1. Try EmailJS API if TemplateId and PublicKey are provided
+                    if (!string.IsNullOrEmpty(emailJsTemplateId) && !string.IsNullOrEmpty(emailJsPublicKey))
+                    {
+                        var emailJsPayload = new
+                        {
+                            service_id = emailJsServiceId.Trim(),
+                            template_id = emailJsTemplateId.Trim(),
+                            user_id = emailJsPublicKey.Trim(),
+                            template_params = new
+                            {
+                                to_email = email,
+                                recipient = email,
+                                code = code,
+                                subject = subject
+                            }
+                        };
+
+                        var emailJsRequest = new HttpRequestMessage(HttpMethod.Post, "https://api.emailjs.com/api/v1.0/email/send");
+                        emailJsRequest.Content = new StringContent(JsonSerializer.Serialize(emailJsPayload), Encoding.UTF8, "application/json");
+
+                        _logger.LogInformation($"[EmailJS API] Sending email via service '{emailJsServiceId}' to {email}...");
+                        var emailJsResponse = await _httpClient.SendAsync(emailJsRequest);
+                        var emailJsResult = await emailJsResponse.Content.ReadAsStringAsync();
+
+                        if (emailJsResponse.IsSuccessStatusCode)
+                        {
+                            _logger.LogInformation($"[EmailJS SUCCESS] Real email sent to {email}! Result: {emailJsResult}");
+                            return;
+                        }
+                        _logger.LogError($"[EmailJS Failed] HTTP {emailJsResponse.StatusCode}: {emailJsResult}");
+                    }
+
+                    // 2. Fallback: Check Brevo API
+                    var brevoKey = _configuration["Brevo:ApiKey"] ?? _configuration["BrevoApiKey"] ?? _configuration["Brevo__ApiKey"];
                     if (!string.IsNullOrEmpty(brevoKey) && !brevoKey.Contains("YOUR_"))
                     {
                         var brevoPayload = new
@@ -74,26 +84,19 @@ namespace apiprojnew.Common
                             sender = new { name = "GETO Project", email = "cheshmaritashvilizaza@gmail.com" },
                             to = new[] { new { email = email } },
                             subject = subject,
-                            htmlContent = htmlBody
+                            htmlContent = $"<h1>{subject}</h1><p>Your verification code is: <strong>{code}</strong></p>"
                         };
 
                         var brevoRequest = new HttpRequestMessage(HttpMethod.Post, "https://api.brevo.com/v3/smtp/email");
                         brevoRequest.Headers.Add("api-key", brevoKey.Trim());
                         brevoRequest.Content = new StringContent(JsonSerializer.Serialize(brevoPayload), Encoding.UTF8, "application/json");
 
-                        _logger.LogInformation($"[Brevo API] Sending email to {email}...");
                         var brevoResponse = await _httpClient.SendAsync(brevoRequest);
-                        var brevoResult = await brevoResponse.Content.ReadAsStringAsync();
-
-                        if (brevoResponse.IsSuccessStatusCode)
-                        {
-                            _logger.LogInformation($"[Brevo API SUCCESS] Email delivered to {email}! Result: {brevoResult}");
-                            return;
-                        }
-                        _logger.LogError($"[Brevo API Failed] HTTP {brevoResponse.StatusCode}: {brevoResult}");
+                        if (brevoResponse.IsSuccessStatusCode) return;
                     }
 
-                    // 2. Try Resend HTTP API
+                    // 3. Fallback: Check Resend API
+                    var resendKey = _configuration["Resend:ApiKey"] ?? _configuration["ResendApiKey"] ?? _configuration["Resend__ApiKey"];
                     if (!string.IsNullOrEmpty(resendKey) && !resendKey.Contains("YOUR_"))
                     {
                         var resendPayload = new
@@ -101,23 +104,14 @@ namespace apiprojnew.Common
                             from = "GETO Project <onboarding@resend.dev>",
                             to = new[] { email },
                             subject = subject,
-                            html = htmlBody
+                            html = $"<h1>{subject}</h1><p>Your verification code is: <strong>{code}</strong></p>"
                         };
 
                         var resendRequest = new HttpRequestMessage(HttpMethod.Post, "https://api.resend.com/emails");
                         resendRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", resendKey.Trim());
                         resendRequest.Content = new StringContent(JsonSerializer.Serialize(resendPayload), Encoding.UTF8, "application/json");
 
-                        _logger.LogInformation($"[Resend API] Sending email to {email}...");
-                        var resendResponse = await _httpClient.SendAsync(resendRequest);
-                        var resendResult = await resendResponse.Content.ReadAsStringAsync();
-
-                        if (resendResponse.IsSuccessStatusCode)
-                        {
-                            _logger.LogInformation($"[Resend API SUCCESS] Email delivered to {email}! Result: {resendResult}");
-                            return;
-                        }
-                        _logger.LogError($"[Resend API Failed] HTTP {resendResponse.StatusCode}: {resendResult}");
+                        await _httpClient.SendAsync(resendRequest);
                     }
                 }
                 catch (Exception ex)
