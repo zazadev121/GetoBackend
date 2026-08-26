@@ -29,11 +29,15 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:4200", "http://localhost:3000", "http://localhost:5173")
+        policy.WithOrigins(
+                "http://localhost:4200",
+                "http://localhost:3000",
+                "http://localhost:5173",
+                "https://geto-frontend-fcq51yzdv-zazadev121s-projects.vercel.app"
+              )
               .AllowAnyMethod()
               .AllowAnyHeader()
-              .AllowCredentials()
-              .SetIsOriginAllowed(_ => true);
+              .AllowCredentials();
     });
 });
 
@@ -98,11 +102,8 @@ builder.Services.AddDbContext<DataContext>(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 // Comment out HTTPS redirection during HTTP local development to prevent 307 redirect CORS issues
 // app.UseHttpsRedirection();
