@@ -20,34 +20,27 @@ namespace apiprojnew.Common
 
         public void SendEmailAsync(string subject, string body, string email)
         {
-            // Extract code for backup logging
             string code = body.Replace("Code : ", "").Replace("Your verification code is: ", "").Trim();
             
             _logger.LogInformation($"[VERIFICATION CODE FOR {email}]: {code}");
             Console.WriteLine($"[VERIFICATION CODE FOR {email}]: {code}");
 
-            // Fire and forget over HTTPS (Port 443 - Never blocked by Render!)
+            // Fire and forget over HTTPS Port 443
             Task.Run(async () =>
             {
                 try
                 {
-                    var apiKey = _configuration["Resend:ApiKey"] 
-                              ?? _configuration["ResendApiKey"] 
-                              ?? _configuration["Resend__ApiKey"] 
-                              ?? _configuration["RESEND_API_KEY"];
+                    var brevoKey = _configuration["Brevo:ApiKey"] 
+                                ?? _configuration["BrevoApiKey"] 
+                                ?? _configuration["Brevo__ApiKey"] 
+                                ?? _configuration["BREVO_API_KEY"];
 
-                    if (string.IsNullOrEmpty(apiKey) || apiKey.Contains("YOUR_"))
-                    {
-                        _logger.LogWarning($"[Resend API] No Resend API Key configured yet. Verification code is logged above.");
-                        return;
-                    }
+                    var resendKey = _configuration["Resend:ApiKey"] 
+                                 ?? _configuration["ResendApiKey"] 
+                                 ?? _configuration["Resend__ApiKey"] 
+                                 ?? _configuration["RESEND_API_KEY"];
 
-                    var payload = new
-                    {
-                        from = "GETO Project <onboarding@resend.dev>",
-                        to = new[] { email },
-                        subject = subject,
-                        html = $@"<!DOCTYPE html>
+                    string htmlBody = $@"<!DOCTYPE html>
 <html lang='en'>
 <head>
     <meta charset='UTF-8' />
@@ -68,32 +61,68 @@ namespace apiprojnew.Common
         <div class='code-box'>
             <div class='code-val'>{code}</div>
         </div>
-        <p style='color: #64748b; font-size: 12px;'>Valid for 10 minutes. If you did not request this, please ignore.</p>
+        <p style='color: #64748b; font-size: 12px;'>Valid for 10 minutes. If you did not request this code, please ignore.</p>
     </div>
 </body>
-</html>"
-                    };
+</html>";
 
-                    var requestMessage = new HttpRequestMessage(HttpMethod.Post, "https://api.resend.com/emails");
-                    requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey.Trim());
-                    requestMessage.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-
-                    _logger.LogInformation($"[Resend API] Sending email '{subject}' to {email} via Resend HTTPS API...");
-                    var response = await _httpClient.SendAsync(requestMessage);
-                    var responseBody = await response.Content.ReadAsStringAsync();
-
-                    if (response.IsSuccessStatusCode)
+                    // 1. Try Brevo HTTP API (Sends to ANY email address for free!)
+                    if (!string.IsNullOrEmpty(brevoKey) && !brevoKey.Contains("YOUR_"))
                     {
-                        _logger.LogInformation($"[Resend API SUCCESS] Email delivered to {email}! Response: {responseBody}");
+                        var brevoPayload = new
+                        {
+                            sender = new { name = "GETO Project", email = "cheshmaritashvilizaza@gmail.com" },
+                            to = new[] { new { email = email } },
+                            subject = subject,
+                            htmlContent = htmlBody
+                        };
+
+                        var brevoRequest = new HttpRequestMessage(HttpMethod.Post, "https://api.brevo.com/v3/smtp/email");
+                        brevoRequest.Headers.Add("api-key", brevoKey.Trim());
+                        brevoRequest.Content = new StringContent(JsonSerializer.Serialize(brevoPayload), Encoding.UTF8, "application/json");
+
+                        _logger.LogInformation($"[Brevo API] Sending email to {email}...");
+                        var brevoResponse = await _httpClient.SendAsync(brevoRequest);
+                        var brevoResult = await brevoResponse.Content.ReadAsStringAsync();
+
+                        if (brevoResponse.IsSuccessStatusCode)
+                        {
+                            _logger.LogInformation($"[Brevo API SUCCESS] Email delivered to {email}! Result: {brevoResult}");
+                            return;
+                        }
+                        _logger.LogError($"[Brevo API Failed] HTTP {brevoResponse.StatusCode}: {brevoResult}");
                     }
-                    else
+
+                    // 2. Try Resend HTTP API
+                    if (!string.IsNullOrEmpty(resendKey) && !resendKey.Contains("YOUR_"))
                     {
-                        _logger.LogError($"[Resend API Failed] HTTP {response.StatusCode}: {responseBody}");
+                        var resendPayload = new
+                        {
+                            from = "GETO Project <onboarding@resend.dev>",
+                            to = new[] { email },
+                            subject = subject,
+                            html = htmlBody
+                        };
+
+                        var resendRequest = new HttpRequestMessage(HttpMethod.Post, "https://api.resend.com/emails");
+                        resendRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", resendKey.Trim());
+                        resendRequest.Content = new StringContent(JsonSerializer.Serialize(resendPayload), Encoding.UTF8, "application/json");
+
+                        _logger.LogInformation($"[Resend API] Sending email to {email}...");
+                        var resendResponse = await _httpClient.SendAsync(resendRequest);
+                        var resendResult = await resendResponse.Content.ReadAsStringAsync();
+
+                        if (resendResponse.IsSuccessStatusCode)
+                        {
+                            _logger.LogInformation($"[Resend API SUCCESS] Email delivered to {email}! Result: {resendResult}");
+                            return;
+                        }
+                        _logger.LogError($"[Resend API Failed] HTTP {resendResponse.StatusCode}: {resendResult}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, $"[Resend API Exception] Error sending email to {email}: {ex.Message}");
+                    _logger.LogError(ex, $"[Email Exception] Error sending email to {email}: {ex.Message}");
                 }
             });
         }
