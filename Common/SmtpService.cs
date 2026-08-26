@@ -37,14 +37,16 @@ namespace apiprojnew.Common
 
                     var emailJsTemplateId = _configuration["EmailJs:TemplateId"] 
                                         ?? _configuration["EmailJsTemplateId"] 
-                                        ?? _configuration["EmailJs__TemplateId"];
+                                        ?? _configuration["EmailJs__TemplateId"]
+                                        ?? "template_5yp4o4e";
 
                     var emailJsPublicKey = _configuration["EmailJs:PublicKey"] 
                                        ?? _configuration["EmailJsPublicKey"] 
-                                       ?? _configuration["EmailJs__PublicKey"];
+                                       ?? _configuration["EmailJs__PublicKey"]
+                                       ?? "QQWzdMHl281Ejhe-A";
 
-                    // 1. Try EmailJS API if TemplateId and PublicKey are provided
-                    if (!string.IsNullOrEmpty(emailJsTemplateId) && !string.IsNullOrEmpty(emailJsPublicKey))
+                    // 1. Try EmailJS API if PublicKey is provided
+                    if (!string.IsNullOrEmpty(emailJsPublicKey))
                     {
                         var emailJsPayload = new
                         {
@@ -56,6 +58,8 @@ namespace apiprojnew.Common
                                 to_email = email,
                                 recipient = email,
                                 code = code,
+                                passcode = code,
+                                time = "10 minutes",
                                 subject = subject
                             }
                         };
