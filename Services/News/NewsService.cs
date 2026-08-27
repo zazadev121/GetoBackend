@@ -70,6 +70,45 @@ namespace apiprojnew.Services.News
             }
         }
 
+        public async Task<Result<Models.News>> UpdateNewsAsync(int id, CreateNewsDto dto)
+        {
+            if (dto == null)
+            {
+                return Result<Models.News>.BadRequest("Invalid request payload");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Title))
+            {
+                return Result<Models.News>.BadRequest("Title is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Text))
+            {
+                return Result<Models.News>.BadRequest("Text content is required");
+            }
+
+            try
+            {
+                var newsItem = await _context.News.FindAsync(id);
+                if (newsItem == null)
+                {
+                    return Result<Models.News>.NotFound("News item not found");
+                }
+
+                newsItem.Title = dto.Title.Trim();
+                newsItem.Text = dto.Text.Trim();
+
+                await _context.SaveChangesAsync();
+
+                return Result<Models.News>.Ok(newsItem);
+            }
+            catch (Exception ex)
+            {
+                var inner = ex.InnerException != null ? $" Inner: {ex.InnerException.Message}" : "";
+                return Result<Models.News>.BadRequest($"Failed to update news item: {ex.Message}{inner}");
+            }
+        }
+
         public async Task<Result<string>> DeleteNewsAsync(int id)
         {
             try

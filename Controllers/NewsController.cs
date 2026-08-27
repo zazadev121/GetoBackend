@@ -53,6 +53,24 @@ namespace apiprojnew.Controllers
             return StatusCode(result.StatusCode, result);
         }
 
+        [HttpPut("{id}")]
+        [Authorize]
+        public async Task<IActionResult> UpdateNews(int id, [FromBody] CreateNewsDto dto)
+        {
+            if (!IsAdmin())
+            {
+                return StatusCode(403, Result<Models.News>.BadRequest("Admin privileges required to update news"));
+            }
+
+            if (dto == null)
+            {
+                return BadRequest(Result<Models.News>.BadRequest("Payload is required"));
+            }
+
+            var result = await _newsService.UpdateNewsAsync(id, dto);
+            return StatusCode(result.StatusCode, result);
+        }
+
         [HttpDelete("{id}")]
         [Authorize]
         public async Task<IActionResult> DeleteNews(int id)
