@@ -1,4 +1,4 @@
-﻿using apiprojnew.Models;
+using apiprojnew.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace apiprojnew.Data
@@ -8,6 +8,7 @@ namespace apiprojnew.Data
 
         public DbSet<User> Users { get; set; }
         public DbSet<Document> Documents { get; set; }
+        public DbSet<News> News { get; set; }
 
 
 
