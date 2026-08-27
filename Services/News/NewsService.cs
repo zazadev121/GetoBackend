@@ -55,6 +55,8 @@ namespace apiprojnew.Services.News
                 {
                     Title = dto.Title.Trim(),
                     Text = dto.Text.Trim(),
+                    TitleEn = string.IsNullOrWhiteSpace(dto.TitleEn) ? null : dto.TitleEn.Trim(),
+                    TextEn = string.IsNullOrWhiteSpace(dto.TextEn) ? null : dto.TextEn.Trim(),
                     DateCreated = DateTime.UtcNow
                 };
 
@@ -97,6 +99,8 @@ namespace apiprojnew.Services.News
 
                 newsItem.Title = dto.Title.Trim();
                 newsItem.Text = dto.Text.Trim();
+                newsItem.TitleEn = string.IsNullOrWhiteSpace(dto.TitleEn) ? null : dto.TitleEn.Trim();
+                newsItem.TextEn = string.IsNullOrWhiteSpace(dto.TextEn) ? null : dto.TextEn.Trim();
 
                 await _context.SaveChangesAsync();
 
