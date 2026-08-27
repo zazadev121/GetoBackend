@@ -1,10 +1,10 @@
-﻿namespace apiprojnew.Enum
+namespace apiprojnew.Enum
 {
     public enum userstatus
     {
-        Approved = 0,
-        Pending = 1,
-        Rejected = 2,
+        Pending = 0,
+        Rejected = 1,
+        Approved = 2,
         Resubmission = 3,
     }
 }
