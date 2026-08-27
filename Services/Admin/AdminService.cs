@@ -304,93 +304,112 @@ namespace apiprojnew.Services.Admin
 
         private void SendStatusNotificationEmail(Models.User user, userstatus oldStatus, userstatus newStatus)
         {
-            try
-            {
-                string oldStatusName = GetStatusTitle(oldStatus);
-                string newStatusName = GetStatusTitle(newStatus);
-                string detailMessageKa = GetStatusDetailMessageKa(newStatus);
-
-                string subject = $"GETO Project: თქვენი სტატუსი განახლდა / Status Update ({newStatusName})";
-
-                string plainText = $"გამარჯობა {user.Name} {user.LastName},\n\n" +
-                                   $"თქვენი ანგარიშის სტატუსი შპს \"გეთო ფროჯექთი\"-ს პორტალზე შეიცვალა:\n" +
-                                   $"ძველი სტატუსი: {oldStatusName}\n" +
-                                   $"ახალი სტატუსი: {newStatusName}\n\n" +
-                                   $"{detailMessageKa}\n\n" +
-                                   $"დეტალებისთვის გთხოვთ ეწვიოთ თქვენს პირად კაბინეტს.";
-
-                string htmlContent = $@"
-                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #1e293b; border-radius: 12px; background-color: #0f172a; color: #f8fafc;'>
-                    <div style='text-align: center; padding-bottom: 20px; border-bottom: 1px solid #334155;'>
-                        <h2 style='color: #38bdf8; margin: 0;'>GETO Project LLC</h2>
-                        <p style='color: #94a3b8; font-size: 14px; margin-top: 5px;'>სტატუსის ცვლილების შეტყობინება / Status Update Notice</p>
-                    </div>
-                    <div style='padding: 20px 0;'>
-                        <p style='font-size: 16px; color: #f1f5f9;'>მოგესალმებით, <strong>{user.Name} {user.LastName}</strong>!</p>
-                        <p style='font-size: 14px; color: #cbd5e1; line-height: 1.6;'>
-                            თქვენი ანგარიშის სტატუსი განახლდა:
-                        </p>
-                        <div style='background-color: #1e293b; padding: 15px; border-radius: 8px; border-left: 4px solid #38bdf8; margin: 15px 0;'>
-                            <p style='margin: 0 0 8px 0; font-size: 13px; color: #94a3b8;'>ძველი სტატუსი: <span style='color: #cbd5e1;'>{oldStatusName}</span></p>
-                            <p style='margin: 0; font-size: 16px; font-weight: bold; color: #38bdf8;'>ახალი სტატუსი: {newStatusName}</p>
-                        </div>
-                        <p style='font-size: 14px; color: #cbd5e1; line-height: 1.6; background-color: #0284c715; padding: 12px; border-radius: 8px; border: 1px solid #0284c730;'>
-                            {detailMessageKa}
-                        </p>
-                    </div>
-                    <div style='text-align: center; padding-top: 20px; border-top: 1px solid #334155; font-size: 12px; color: #64748b;'>
-                        <p style='margin: 0;'>შპს გეთო ფროჯექთი (GETO Project LLC)</p>
-                        <p style='margin: 5px 0 0 0;'>კონსულტაციისთვის დაგვიკავშირდით: +995 577 54 75 77 | getogeto2020@gmail.com</p>
-                    </div>
-                </div>";
-
-                _smtpService.SendNotificationEmailAsync(subject, htmlContent, plainText, user.Email);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to send status update email: {ex.Message}");
-            }
+            SendAccountUpdateEmail(user, changedField: "status", oldStatus: oldStatus, newStatus: newStatus, oldPhase: null, newPhase: user.UserPahse);
         }
 
         private void SendPhaseNotificationEmail(Models.User user, UserPahse oldPhase, UserPahse newPhase)
         {
+            SendAccountUpdateEmail(user, changedField: "phase", oldStatus: null, newStatus: user.Status, oldPhase: oldPhase, newPhase: newPhase);
+        }
+
+        private void SendAccountUpdateEmail(Models.User user, string changedField, userstatus? oldStatus, userstatus newStatus, UserPahse? oldPhase, UserPahse newPhase)
+        {
             try
             {
-                string oldPhaseName = GetPhaseTitle(oldPhase);
-                string newPhaseName = GetPhaseTitle(newPhase);
-                string detailMessageKa = GetPhaseDetailMessageKa(newPhase);
+                bool isStatusChanged = changedField == "status" && oldStatus.HasValue;
+                bool isPhaseChanged = changedField == "phase" && oldPhase.HasValue;
 
-                string subject = $"GETO Project: თქვენ გადახვედით ახალ ეტაპზე / Phase Update ({newPhaseName})";
+                string currentStatusTitle = GetStatusTitle(newStatus);
+                string currentPhaseTitle = GetPhaseTitle(newPhase);
+
+                string changeSummaryKa = isStatusChanged 
+                    ? $"შეიცვალა თქვენი ანგარიშის სტატუსი ({GetStatusTitle(oldStatus!.Value)} ➔ {currentStatusTitle})" 
+                    : $"შეიცვალა თქვენი მიმდინარე ეტაპი ({GetPhaseTitle(oldPhase!.Value)} ➔ {currentPhaseTitle})";
+
+                string detailMessageKa = isStatusChanged 
+                    ? GetStatusDetailMessageKa(newStatus) 
+                    : GetPhaseDetailMessageKa(newPhase);
+
+                string subject = isStatusChanged
+                    ? $"GETO Project: სტატუსი შეიცვალა — {currentStatusTitle}"
+                    : $"GETO Project: ეტაპი შეიცვალა — {currentPhaseTitle}";
+
+                string statusLineText = isStatusChanged
+                    ? $"  • სტატუსი (STATUS): {currentStatusTitle}  <--- [შეიცვალა / CHANGED] (ძველი: {GetStatusTitle(oldStatus!.Value)})"
+                    : $"  • სტატუსი (STATUS): {currentStatusTitle}  (უცვლელი / Unchanged)";
+
+                string phaseLineText = isPhaseChanged
+                    ? $"  • ეტაპი (PHASE):   {currentPhaseTitle}  <--- [შეიცვალა / CHANGED] (ძველი: {GetPhaseTitle(oldPhase!.Value)})"
+                    : $"  • ეტაპი (PHASE):   {currentPhaseTitle}  (უცვლელი / Unchanged)";
 
                 string plainText = $"გამარჯობა {user.Name} {user.LastName},\n\n" +
-                                   $"თქვენი ეტაპი შპს \"გეთო ფროჯექთი\"-ს პორტალზე განახლდა:\n" +
-                                   $"წინა ეტაპი: {oldPhaseName}\n" +
-                                   $"ახალი ეტაპი: {newPhaseName}\n\n" +
-                                   $"{detailMessageKa}\n\n" +
-                                   $"გთხოვთ ეწვიოთ თქვენს პირად კაბინეტს ახალი ეტაპის ინსტრუქციების და შაბლონების სანახავად.";
+                                   $"თქვენს ანგარიშზე განხორციელდა ცვლილება: {changeSummaryKa}\n\n" +
+                                   $"ანგარიშის მიმდინარე მონაცემები:\n" +
+                                   $"{statusLineText}\n" +
+                                   $"{phaseLineText}\n\n" +
+                                   $"დეტალური ინფორმაცია:\n{detailMessageKa}\n\n" +
+                                   $"დეტალებისთვის გთხოვთ ეწვიოთ თქვენს პირად კაბინეტს (GETO Project).";
+
+                string statusRowHtml = isStatusChanged ? $@"
+                    <tr style='background-color: #0284c720; border-left: 4px solid #38bdf8;'>
+                        <td style='padding: 12px; font-weight: bold; color: #38bdf8;'>სტატუსი / Status</td>
+                        <td style='padding: 12px; color: #ffffff;'>
+                            <span style='background-color: #0284c7; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 6px;'>CHANGED / შეიცვალა</span>
+                            <strong>{currentStatusTitle}</strong>
+                            <br/><span style='font-size: 12px; color: #94a3b8;'>ძველი / Previous: {GetStatusTitle(oldStatus!.Value)}</span>
+                        </td>
+                    </tr>" : $@"
+                    <tr style='border-bottom: 1px solid #334155;'>
+                        <td style='padding: 12px; font-weight: bold; color: #94a3b8;'>სტატუსი / Status</td>
+                        <td style='padding: 12px; color: #cbd5e1;'>
+                            {currentStatusTitle} <span style='font-size: 11px; color: #64748b;'>(უცვლელი / Unchanged)</span>
+                        </td>
+                    </tr>";
+
+                string phaseRowHtml = isPhaseChanged ? $@"
+                    <tr style='background-color: #ec489920; border-left: 4px solid #ec4899;'>
+                        <td style='padding: 12px; font-weight: bold; color: #f472b6;'>ეტაპი / Phase</td>
+                        <td style='padding: 12px; color: #ffffff;'>
+                            <span style='background-color: #db2777; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 6px;'>CHANGED / შეიცვალა</span>
+                            <strong>{currentPhaseTitle}</strong>
+                            <br/><span style='font-size: 12px; color: #94a3b8;'>ძველი / Previous: {GetPhaseTitle(oldPhase!.Value)}</span>
+                        </td>
+                    </tr>" : $@"
+                    <tr style='border-bottom: 1px solid #334155;'>
+                        <td style='padding: 12px; font-weight: bold; color: #94a3b8;'>ეტაპი / Phase</td>
+                        <td style='padding: 12px; color: #cbd5e1;'>
+                            {currentPhaseTitle} <span style='font-size: 11px; color: #64748b;'>(უცვლელი / Unchanged)</span>
+                        </td>
+                    </tr>";
+
+                string headerBadgeColor = isStatusChanged ? "#38bdf8" : "#ec4899";
 
                 string htmlContent = $@"
                 <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #1e293b; border-radius: 12px; background-color: #0f172a; color: #f8fafc;'>
-                    <div style='text-align: center; padding-bottom: 20px; border-bottom: 1px solid #334155;'>
-                        <h2 style='color: #ec4899; margin: 0;'>GETO Project LLC</h2>
-                        <p style='color: #94a3b8; font-size: 14px; margin-top: 5px;'>ეტაპის ცვლილების შეტყობინება / Phase Update Notice</p>
+                    <div style='text-align: center; padding-bottom: 15px; border-bottom: 1px solid #334155;'>
+                        <h2 style='color: {headerBadgeColor}; margin: 0;'>GETO Project LLC</h2>
+                        <p style='color: #94a3b8; font-size: 14px; margin-top: 5px;'>ანგარიშის განახლების შეტყობინება / Account Update Notice</p>
                     </div>
                     <div style='padding: 20px 0;'>
                         <p style='font-size: 16px; color: #f1f5f9;'>მოგესალმებით, <strong>{user.Name} {user.LastName}</strong>!</p>
                         <p style='font-size: 14px; color: #cbd5e1; line-height: 1.6;'>
-                            თქვენი ეტაპი წარმატებით განახლდა:
+                            თქვენს ანგარიშზე განხორციელდა ცვლილება: <strong>{changeSummaryKa}</strong>
                         </p>
-                        <div style='background-color: #1e293b; padding: 15px; border-radius: 8px; border-left: 4px solid #ec4899; margin: 15px 0;'>
-                            <p style='margin: 0 0 8px 0; font-size: 13px; color: #94a3b8;'>წინა ეტაპი: <span style='color: #cbd5e1;'>{oldPhaseName}</span></p>
-                            <p style='margin: 0; font-size: 16px; font-weight: bold; color: #ec4899;'>ახალი ეტაპი: {newPhaseName}</p>
+
+                        <!-- Status & Phase Overview Table -->
+                        <table style='width: 100%; border-collapse: collapse; margin: 20px 0; background-color: #1e293b; border-radius: 8px; overflow: hidden; font-size: 14px;'>
+                            {statusRowHtml}
+                            {phaseRowHtml}
+                        </table>
+
+                        <div style='background-color: #0284c715; padding: 14px; border-radius: 8px; border: 1px solid #0284c730; margin-top: 15px;'>
+                            <p style='margin: 0; font-size: 13px; color: #38bdf8; font-weight: bold;'>ინსტრუქცია / Guidance:</p>
+                            <p style='margin: 6px 0 0 0; font-size: 13px; color: #e2e8f0; line-height: 1.5;'>{detailMessageKa}</p>
                         </div>
-                        <p style='font-size: 14px; color: #cbd5e1; line-height: 1.6; background-color: #ec489915; padding: 12px; border-radius: 8px; border: 1px solid #ec489930;'>
-                            {detailMessageKa}
-                        </p>
                     </div>
-                    <div style='text-align: center; padding-top: 20px; border-top: 1px solid #334155; font-size: 12px; color: #64748b;'>
+                    <div style='text-align: center; padding-top: 15px; border-top: 1px solid #334155; font-size: 12px; color: #64748b;'>
                         <p style='margin: 0;'>შპს გეთო ფროჯექთი (GETO Project LLC)</p>
-                        <p style='margin: 5px 0 0 0;'>კონსულტაციისთვის დაგვიკავშირდით: +995 577 54 75 77 | getogeto2020@gmail.com</p>
+                        <p style='margin: 5px 0 0 0;'>საკონტაქტო: +995 577 54 75 77 | getogeto2020@gmail.com</p>
                     </div>
                 </div>";
 
@@ -398,7 +417,7 @@ namespace apiprojnew.Services.Admin
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to send phase update email: {ex.Message}");
+                Console.WriteLine($"Failed to send update email: {ex.Message}");
             }
         }
 
