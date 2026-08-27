@@ -1,4 +1,4 @@
-# This stage is used when running from VS in fast mode (Default for Debug configuration)
+ï»¿# This stage is used when running from VS in fast mode (Default for Debug configuration)
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 EXPOSE 8080
@@ -23,6 +23,8 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-# Render sets PORT env var dynamically — bind Kestrel to it
+# Prevent inotify limit crashes in containerized host environments like Render
+ENV DOTNET_USE_POLLING_FILE_WATCHER=true
+# Render sets PORT env var dynamically - bind Kestrel to it
 ENV ASPNETCORE_URLS=http://+:8080
 ENTRYPOINT ["dotnet", "apiprojnew.dll"]

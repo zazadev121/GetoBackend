@@ -10,6 +10,8 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using apiprojnew.Services.Admin;
 
+Environment.SetEnvironmentVariable("DOTNET_USE_POLLING_FILE_WATCHER", "true");
+
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args
