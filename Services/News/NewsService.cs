@@ -27,12 +27,18 @@ namespace apiprojnew.Services.News
             }
             catch (Exception ex)
             {
-                return Result<List<Models.News>>.BadRequest($"Failed to retrieve news: {ex.Message}");
+                var inner = ex.InnerException != null ? $" Inner: {ex.InnerException.Message}" : "";
+                return Result<List<Models.News>>.BadRequest($"Failed to retrieve news: {ex.Message}{inner}");
             }
         }
 
         public async Task<Result<Models.News>> CreateNewsAsync(CreateNewsDto dto)
         {
+            if (dto == null)
+            {
+                return Result<Models.News>.BadRequest("Invalid request payload");
+            }
+
             if (string.IsNullOrWhiteSpace(dto.Title))
             {
                 return Result<Models.News>.BadRequest("Title is required");
@@ -59,7 +65,8 @@ namespace apiprojnew.Services.News
             }
             catch (Exception ex)
             {
-                return Result<Models.News>.BadRequest($"Failed to create news item: {ex.Message}");
+                var inner = ex.InnerException != null ? $" Inner: {ex.InnerException.Message}" : "";
+                return Result<Models.News>.BadRequest($"Failed to create news item: {ex.Message}{inner}");
             }
         }
 
@@ -80,7 +87,8 @@ namespace apiprojnew.Services.News
             }
             catch (Exception ex)
             {
-                return Result<string>.BadRequest($"Failed to delete news item: {ex.Message}");
+                var inner = ex.InnerException != null ? $" Inner: {ex.InnerException.Message}" : "";
+                return Result<string>.BadRequest($"Failed to delete news item: {ex.Message}{inner}");
             }
         }
     }

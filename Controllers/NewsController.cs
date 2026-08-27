@@ -1,3 +1,4 @@
+using apiprojnew.Common;
 using apiprojnew.DTO;
 using apiprojnew.Enum;
 using apiprojnew.Services.News;
@@ -20,8 +21,10 @@ namespace apiprojnew.Controllers
 
         private bool IsAdmin()
         {
-            var roleClaim = User.FindFirst(ClaimTypes.Role);
-            return roleClaim?.Value == UserRoles.Admin.ToString();
+            var roleClaim = User.FindFirst(ClaimTypes.Role) ?? User.FindFirst("role") ?? User.FindFirst("Role");
+            if (roleClaim == null) return false;
+            var val = roleClaim.Value;
+            return val == UserRoles.Admin.ToString() || val == ((int)UserRoles.Admin).ToString();
         }
 
         [HttpGet]
@@ -38,7 +41,12 @@ namespace apiprojnew.Controllers
         {
             if (!IsAdmin())
             {
-                return Forbid();
+                return StatusCode(403, Result<Models.News>.BadRequest("Admin privileges required to post news"));
+            }
+
+            if (dto == null)
+            {
+                return BadRequest(Result<Models.News>.BadRequest("Payload is required"));
             }
 
             var result = await _newsService.CreateNewsAsync(dto);
@@ -51,7 +59,7 @@ namespace apiprojnew.Controllers
         {
             if (!IsAdmin())
             {
-                return Forbid();
+                return StatusCode(403, Result<string>.BadRequest("Admin privileges required to delete news"));
             }
 
             var result = await _newsService.DeleteNewsAsync(id);
