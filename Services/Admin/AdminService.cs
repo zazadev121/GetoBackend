@@ -144,7 +144,7 @@ namespace apiprojnew.Services.Admin
             }
         }
 
-        public async Task<Result<string>> UpdateUserStatusAsync(int userId, userstatus status)
+        public async Task<Result<string>> UpdateUserStatusAsync(int userId, userstatus status, string? comment = null)
         {
             try
             {
@@ -161,7 +161,7 @@ namespace apiprojnew.Services.Admin
 
                 if (oldStatus != status)
                 {
-                    SendStatusNotificationEmail(user, oldStatus, status);
+                    SendStatusNotificationEmail(user, oldStatus, status, comment);
                 }
 
                 return Result<string>.Ok($"User status updated to {status}");
@@ -172,7 +172,7 @@ namespace apiprojnew.Services.Admin
             }
         }
 
-        public async Task<Result<string>> UpdateUserPhaseAsync(int userId, UserPahse phase)
+        public async Task<Result<string>> UpdateUserPhaseAsync(int userId, UserPahse phase, string? comment = null)
         {
             try
             {
@@ -189,7 +189,7 @@ namespace apiprojnew.Services.Admin
 
                 if (oldPhase != phase)
                 {
-                    SendPhaseNotificationEmail(user, oldPhase, phase);
+                    SendPhaseNotificationEmail(user, oldPhase, phase, comment);
                 }
 
                 return Result<string>.Ok($"User phase updated to {phase}");
@@ -302,17 +302,17 @@ namespace apiprojnew.Services.Admin
             }
         }
 
-        private void SendStatusNotificationEmail(Models.User user, userstatus oldStatus, userstatus newStatus)
+        private void SendStatusNotificationEmail(Models.User user, userstatus oldStatus, userstatus newStatus, string? comment)
         {
-            SendAccountUpdateEmail(user, changedField: "status", oldStatus: oldStatus, newStatus: newStatus, oldPhase: null, newPhase: user.UserPahse);
+            SendAccountUpdateEmail(user, changedField: "status", oldStatus: oldStatus, newStatus: newStatus, oldPhase: null, newPhase: user.UserPahse, comment: comment);
         }
 
-        private void SendPhaseNotificationEmail(Models.User user, UserPahse oldPhase, UserPahse newPhase)
+        private void SendPhaseNotificationEmail(Models.User user, UserPahse oldPhase, UserPahse newPhase, string? comment)
         {
-            SendAccountUpdateEmail(user, changedField: "phase", oldStatus: null, newStatus: user.Status, oldPhase: oldPhase, newPhase: newPhase);
+            SendAccountUpdateEmail(user, changedField: "phase", oldStatus: null, newStatus: user.Status, oldPhase: oldPhase, newPhase: newPhase, comment: comment);
         }
 
-        private void SendAccountUpdateEmail(Models.User user, string changedField, userstatus? oldStatus, userstatus newStatus, UserPahse? oldPhase, UserPahse newPhase)
+        private void SendAccountUpdateEmail(Models.User user, string changedField, userstatus? oldStatus, userstatus newStatus, UserPahse? oldPhase, UserPahse newPhase, string? comment)
         {
             try
             {

@@ -113,7 +113,7 @@ namespace apiprojnew.Controllers
         }
 
         [HttpPut("users/{userId}/status")]
-        public async Task<IActionResult> UpdateUserStatus(int userId, [FromQuery] int status)
+        public async Task<IActionResult> UpdateUserStatus(int userId, [FromQuery] int status, [FromQuery] string? comment)
         {
             if (!CheckAdminAccess())
             {
@@ -121,12 +121,12 @@ namespace apiprojnew.Controllers
             }
 
             var statusEnum = (userstatus)status;
-            var response = await _adminService.UpdateUserStatusAsync(userId, statusEnum);
+            var response = await _adminService.UpdateUserStatusAsync(userId, statusEnum, comment);
             return StatusCode(response.StatusCode, response);
         }
 
         [HttpPut("users/{userId}/phase")]
-        public async Task<IActionResult> UpdateUserPhase(int userId, [FromQuery] int phase)
+        public async Task<IActionResult> UpdateUserPhase(int userId, [FromQuery] int phase, [FromQuery] string? comment)
         {
             if (!CheckAdminAccess())
             {
@@ -134,7 +134,7 @@ namespace apiprojnew.Controllers
             }
 
             var phaseEnum = (UserPahse)phase;
-            var response = await _adminService.UpdateUserPhaseAsync(userId, phaseEnum);
+            var response = await _adminService.UpdateUserPhaseAsync(userId, phaseEnum, comment);
             return StatusCode(response.StatusCode, response);
         }
 

@@ -15,8 +15,8 @@ namespace apiprojnew.Services.Admin
         Task<Result<UserWithDocumentsDTO>> GetUserWithDocumentsByIdAsync(int userId);
         
         // User Status and Phase Management
-        Task<Result<string>> UpdateUserStatusAsync(int userId, userstatus status);
-        Task<Result<string>> UpdateUserPhaseAsync(int userId, UserPahse phase);
+        Task<Result<string>> UpdateUserStatusAsync(int userId, userstatus status, string? comment = null);
+        Task<Result<string>> UpdateUserPhaseAsync(int userId, UserPahse phase, string? comment = null);
         
         // Admin Download User Documents
         Task<Result<byte[]>> DownloadUserDocumentAsync(int documentId, int userId);
