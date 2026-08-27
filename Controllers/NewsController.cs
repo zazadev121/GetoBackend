@@ -41,12 +41,12 @@ namespace apiprojnew.Controllers
         {
             if (!IsAdmin())
             {
-                return StatusCode(403, Result<Models.News>.BadRequest("Admin privileges required to post news"));
+                return StatusCode(403, Result<NewsResponseDto>.BadRequest("Admin privileges required to post news"));
             }
 
             if (dto == null)
             {
-                return BadRequest(Result<Models.News>.BadRequest("Payload is required"));
+                return BadRequest(Result<NewsResponseDto>.BadRequest("Payload is required"));
             }
 
             var result = await _newsService.CreateNewsAsync(dto);
@@ -59,12 +59,12 @@ namespace apiprojnew.Controllers
         {
             if (!IsAdmin())
             {
-                return StatusCode(403, Result<Models.News>.BadRequest("Admin privileges required to update news"));
+                return StatusCode(403, Result<NewsResponseDto>.BadRequest("Admin privileges required to update news"));
             }
 
             if (dto == null)
             {
-                return BadRequest(Result<Models.News>.BadRequest("Payload is required"));
+                return BadRequest(Result<NewsResponseDto>.BadRequest("Payload is required"));
             }
 
             var result = await _newsService.UpdateNewsAsync(id, dto);
@@ -82,6 +82,45 @@ namespace apiprojnew.Controllers
 
             var result = await _newsService.DeleteNewsAsync(id);
             return StatusCode(result.StatusCode, result);
+        }
+
+        [HttpPost("{newsId}/attachments")]
+        [Authorize]
+        public async Task<IActionResult> UploadAttachment(int newsId, IFormFile file)
+        {
+            if (!IsAdmin())
+            {
+                return StatusCode(403, Result<NewsAttachmentDto>.BadRequest("Admin privileges required to upload news attachments"));
+            }
+
+            var result = await _newsService.UploadAttachmentAsync(newsId, file);
+            return StatusCode(result.StatusCode, result);
+        }
+
+        [HttpDelete("attachments/{attachmentId}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteAttachment(int attachmentId)
+        {
+            if (!IsAdmin())
+            {
+                return StatusCode(403, Result<string>.BadRequest("Admin privileges required to delete news attachments"));
+            }
+
+            var result = await _newsService.DeleteAttachmentAsync(attachmentId);
+            return StatusCode(result.StatusCode, result);
+        }
+
+        [HttpGet("attachments/{attachmentId}/download")]
+        [AllowAnonymous]
+        public async Task<IActionResult> DownloadAttachment(int attachmentId)
+        {
+            var res = await _newsService.DownloadAttachmentAsync(attachmentId);
+            if (res == null || res.Value.Stream == null)
+            {
+                return NotFound("Attachment not found");
+            }
+
+            return File(res.Value.Stream, res.Value.ContentType, res.Value.FileName);
         }
     }
 }

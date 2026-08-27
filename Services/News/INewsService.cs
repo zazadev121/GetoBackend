@@ -6,9 +6,12 @@ namespace apiprojnew.Services.News
 {
     public interface INewsService
     {
-        Task<Result<List<Models.News>>> GetAllNewsAsync();
-        Task<Result<Models.News>> CreateNewsAsync(CreateNewsDto dto);
-        Task<Result<Models.News>> UpdateNewsAsync(int id, CreateNewsDto dto);
+        Task<Result<List<NewsResponseDto>>> GetAllNewsAsync();
+        Task<Result<NewsResponseDto>> CreateNewsAsync(CreateNewsDto dto);
+        Task<Result<NewsResponseDto>> UpdateNewsAsync(int id, CreateNewsDto dto);
         Task<Result<string>> DeleteNewsAsync(int id);
+        Task<Result<NewsAttachmentDto>> UploadAttachmentAsync(int newsId, IFormFile file);
+        Task<Result<string>> DeleteAttachmentAsync(int attachmentId);
+        Task<(Stream? Stream, string FileName, string ContentType)?> DownloadAttachmentAsync(int attachmentId);
     }
 }

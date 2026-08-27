@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace apiprojnew.DTO
 {
     public class CreateNewsDto
@@ -6,5 +8,6 @@ namespace apiprojnew.DTO
         public string Text { get; set; } = string.Empty;
         public string? TitleEn { get; set; }
         public string? TextEn { get; set; }
+        public List<NewsLinkDto>? Links { get; set; }
     }
 }
