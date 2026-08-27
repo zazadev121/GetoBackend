@@ -32,18 +32,18 @@ namespace apiprojnew.Common
             });
         }
 
-        public void SendNotificationEmailAsync(string subject, string htmlContent, string plainTextMessage, string recipientEmail)
+        public void SendNotificationEmailAsync(string subject, string htmlContent, string plainTextMessage, string recipientEmail, string? customComment = null)
         {
             _logger.LogInformation($"[NOTIFICATION EMAIL FOR {recipientEmail}]: Subject: '{subject}' | Message: {plainTextMessage}");
             Console.WriteLine($"[NOTIFICATION EMAIL FOR {recipientEmail}]: Subject: '{subject}' | Message: {plainTextMessage}");
 
             Task.Run(async () =>
             {
-                await DispatchEmailAsync(subject, plainTextMessage, htmlContent, recipientEmail);
+                await DispatchEmailAsync(subject, plainTextMessage, htmlContent, recipientEmail, customComment);
             });
         }
 
-        private async Task DispatchEmailAsync(string subject, string textContent, string htmlContent, string email)
+        private async Task DispatchEmailAsync(string subject, string textContent, string htmlContent, string email, string? customComment = null)
         {
             try
             {
@@ -85,6 +85,9 @@ namespace apiprojnew.Common
                                 passcode = textContent,
                                 message = textContent,
                                 content = textContent,
+                                comment = customComment ?? "",
+                                admin_comment = customComment ?? "",
+                                reason = customComment ?? "",
                                 subject = subject,
                                 time = DateTime.UtcNow.ToString("g")
                             }

@@ -342,12 +342,28 @@ namespace apiprojnew.Services.Admin
                     ? $"  • ეტაპი (PHASE):   {currentPhaseTitle}  <--- [შეიცვალა / CHANGED] (ძველი: {GetPhaseTitle(oldPhase!.Value)})"
                     : $"  • ეტაპი (PHASE):   {currentPhaseTitle}  (უცვლელი / Unchanged)";
 
+                string commentTextSection = "";
+                string commentHtmlSection = "";
+
+                if (!string.IsNullOrWhiteSpace(comment))
+                {
+                    var trimmedComment = comment.Trim();
+                    commentTextSection = $"\n\n💬 ადმინისტრატორის კომენტარი / Admin Comment:\n\"{trimmedComment}\"";
+                    
+                    commentHtmlSection = $@"
+                    <div style='background-color: #3b82f615; padding: 14px; border-radius: 8px; border: 1px solid #3b82f640; margin-top: 15px;'>
+                        <p style='margin: 0; font-size: 13px; color: #60a5fa; font-weight: bold;'>💬 ადმინისტრატორის კომენტარი / Admin Comment:</p>
+                        <p style='margin: 8px 0 0 0; font-size: 14px; color: #f8fafc; font-style: italic; line-height: 1.5;'>""{trimmedComment}""</p>
+                    </div>";
+                }
+
                 string plainText = $"გამარჯობა {user.Name} {user.LastName},\n\n" +
                                    $"თქვენს ანგარიშზე განხორციელდა ცვლილება: {changeSummaryKa}\n\n" +
                                    $"ანგარიშის მიმდინარე მონაცემები:\n" +
                                    $"{statusLineText}\n" +
                                    $"{phaseLineText}\n\n" +
-                                   $"დეტალური ინფორმაცია:\n{detailMessageKa}\n\n" +
+                                   $"დეტალური ინფორმაცია:\n{detailMessageKa}" +
+                                   $"{commentTextSection}\n\n" +
                                    $"დეტალებისთვის გთხოვთ ეწვიოთ თქვენს პირად კაბინეტს (GETO Project).";
 
                 string statusRowHtml = isStatusChanged ? $@"
@@ -406,6 +422,8 @@ namespace apiprojnew.Services.Admin
                             <p style='margin: 0; font-size: 13px; color: #38bdf8; font-weight: bold;'>ინსტრუქცია / Guidance:</p>
                             <p style='margin: 6px 0 0 0; font-size: 13px; color: #e2e8f0; line-height: 1.5;'>{detailMessageKa}</p>
                         </div>
+
+                        {commentHtmlSection}
                     </div>
                     <div style='text-align: center; padding-top: 15px; border-top: 1px solid #334155; font-size: 12px; color: #64748b;'>
                         <p style='margin: 0;'>შპს გეთო ფროჯექთი (GETO Project LLC)</p>
@@ -413,7 +431,7 @@ namespace apiprojnew.Services.Admin
                     </div>
                 </div>";
 
-                _smtpService.SendNotificationEmailAsync(subject, htmlContent, plainText, user.Email);
+                _smtpService.SendNotificationEmailAsync(subject, htmlContent, plainText, user.Email, comment);
             }
             catch (Exception ex)
             {
