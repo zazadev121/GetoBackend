@@ -81,10 +81,10 @@ namespace apiprojnew.Common
             var pushOptions = new Dictionary<string, object>
             {
                 { "vapidDetails", _vapid },
-                { "headers", new Dictionary<string, string>
+                { "TTL", 86400 },
+                { "headers", new Dictionary<string, object>
                     {
-                        { "Urgency", "high" },
-                        { "TTL", "86400" }
+                        { "Urgency", "high" }
                     }
                 }
             };
