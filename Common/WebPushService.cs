@@ -46,6 +46,7 @@ namespace apiprojnew.Common
             var db = scope.ServiceProvider.GetRequiredService<DataContext>();
 
             var subs = await db.PushSubscriptions.ToListAsync();
+            Console.WriteLine($"[WebPush] Sending broadcast notification to {subs.Count} subscription(s) for title: '{title}'...");
             await SendBatchAsync(subs, title, body, url);
         }
 
