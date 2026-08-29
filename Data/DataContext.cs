@@ -10,6 +10,7 @@ namespace apiprojnew.Data
         public DbSet<Document> Documents { get; set; }
         public DbSet<News> News { get; set; }
         public DbSet<NewsAttachment> NewsAttachments { get; set; }
+        public DbSet<PushSubscriptionModel> PushSubscriptions { get; set; }
 
         public DataContext(DbContextOptions options) : base(options)
         {
@@ -24,6 +25,14 @@ namespace apiprojnew.Data
                 entity.HasOne(a => a.News)
                       .WithMany(n => n.Attachments)
                       .HasForeignKey(a => a.NewsId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<PushSubscriptionModel>(entity =>
+            {
+                entity.HasOne(p => p.User)
+                      .WithMany()
+                      .HasForeignKey(p => p.UserId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
         }

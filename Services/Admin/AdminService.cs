@@ -3,6 +3,7 @@ using apiprojnew.Data;
 using apiprojnew.DTO;
 using apiprojnew.Enum;
 using Microsoft.EntityFrameworkCore;
+using WebPush;
 
 namespace apiprojnew.Services.Admin
 {
@@ -10,11 +11,13 @@ namespace apiprojnew.Services.Admin
     {
         private readonly DataContext _db;
         private readonly SmtpService _smtpService;
+        private readonly WebPushService _pushService;
 
-        public AdminService(DataContext db, SmtpService smtpService)
+        public AdminService(DataContext db, SmtpService smtpService, WebPushService pushService)
         {
             _db = db;
             _smtpService = smtpService;
+            _pushService = pushService;
         }
 
         public async Task<Result<int>> AddDocumentForAllUsersAsync(string fileName, string contentType, byte[] fileData, UserPahse phase)
@@ -47,6 +50,13 @@ namespace apiprojnew.Services.Admin
 
                 _db.Documents.AddRange(documents);
                 await _db.SaveChangesAsync();
+
+                // Notify all users: new document added for their phase
+                _ = _pushService.SendToAllAsync(
+                    "📎 ახალი ფაილი — GETO Project",
+                    $"ახალი დოკუმენტი დაემატა თქვენს კაბინეტში: {fileName}",
+                    "/dashboard"
+                );
 
                 return Result<int>.Ok(documents.Count);
             }
@@ -162,6 +172,7 @@ namespace apiprojnew.Services.Admin
                 if (oldStatus != status)
                 {
                     SendStatusNotificationEmail(user, oldStatus, status, comment);
+                    _ = _pushService.SendToUserAsync(userId, GetStatusPushTitle(status), GetStatusPushBody(status), "/dashboard");
                 }
 
                 return Result<string>.Ok($"User status updated to {status}");
@@ -190,6 +201,7 @@ namespace apiprojnew.Services.Admin
                 if (oldPhase != phase)
                 {
                     SendPhaseNotificationEmail(user, oldPhase, phase, comment);
+                    _ = _pushService.SendToUserAsync(userId, GetPhasePushTitle(phase), GetPhasePushBody(phase), "/dashboard");
                 }
 
                 return Result<string>.Ok($"User phase updated to {phase}");
@@ -471,5 +483,40 @@ namespace apiprojnew.Services.Admin
                 }).ToList()
             };
         }
+
+        // ─── Push notification label helpers ────────────────────────────────
+        private static string GetStatusPushTitle(userstatus status) => status switch
+        {
+            userstatus.Approved     => "✅ სტატუსი განახლდა — GETO Project",
+            userstatus.Rejected     => "❌ სტატუსი განახლდა — GETO Project",
+            userstatus.Resubmission => "🔄 ხელახლა წარდგენა — GETO Project",
+            _                       => "🔔 სტატუსი განახლდა — GETO Project"
+        };
+
+        private static string GetStatusPushBody(userstatus status) => status switch
+        {
+            userstatus.Approved     => "გილოცავთ! თქვენი დოკუმენტაცია დადასტურებულია.",
+            userstatus.Rejected     => "თქვენი განაცხადი უარყოფილია. დეტალებისთვის გადადით კაბინეტში.",
+            userstatus.Resubmission => "საჭიროა დოკუმენტების ხელახლა გამოგზავნა. გადახედეთ კაბინეტს.",
+            _                       => "თქვენი სტატუსი შეიცვალა. გადახედეთ პირად კაბინეტს."
+        };
+
+        private static string GetPhasePushTitle(UserPahse phase) => phase switch
+        {
+            UserPahse.phaseone      => "📋 I ეტაპი — GETO Project",
+            UserPahse.phasetwo      => "📋 II ეტაპი — GETO Project",
+            UserPahse.phasethree    => "📋 III ეტაპი — GETO Project",
+            UserPahse.phaseCanceled => "📋 ეტაპი გაუქმდა — GETO Project",
+            _                       => "📋 ეტაპი განახლდა — GETO Project"
+        };
+
+        private static string GetPhasePushBody(UserPahse phase) => phase switch
+        {
+            UserPahse.phaseone      => "I ეტაპი: გთხოვთ ატვირთოთ თქვენი რეზიუმე (CV).",
+            UserPahse.phasetwo      => "II ეტაპი: ჩამოტვირთეთ ხელშეკრულება, შეავსეთ და ატვირთეთ PDF-ად.",
+            UserPahse.phasethree    => "III ეტაპი: გადმოგეცემათ სამუშაო ნებართვა. ეწვიეთ კაბინეტს.",
+            UserPahse.phaseCanceled => "თქვენი ეტაპი გაუქმებულია. კითხვებისთვის დაგვიკავშირდით.",
+            _                       => "თქვენი ეტაპი განახლდა."
+        };
     }
 }

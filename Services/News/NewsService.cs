@@ -11,11 +11,13 @@ namespace apiprojnew.Services.News
     {
         private readonly DataContext _context;
         private readonly IWebHostEnvironment _env;
+        private readonly WebPushService _pushService;
 
-        public NewsService(DataContext context, IWebHostEnvironment env)
+        public NewsService(DataContext context, IWebHostEnvironment env, WebPushService pushService)
         {
             _context = context;
             _env = env;
+            _pushService = pushService;
         }
 
         private static NewsResponseDto MapToDto(Models.News n)
@@ -89,6 +91,13 @@ namespace apiprojnew.Services.News
 
                 _context.News.Add(newsItem);
                 await _context.SaveChangesAsync();
+
+                // Push notification to all subscribers
+                _ = _pushService.SendToAllAsync(
+                    "📰 სიახლე — GETO Project",
+                    newsItem.Title,
+                    $"/news/{newsItem.Id}"
+                );
 
                 return Result<NewsResponseDto>.Ok(MapToDto(newsItem));
             }
