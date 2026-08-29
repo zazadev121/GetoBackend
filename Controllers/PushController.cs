@@ -43,9 +43,9 @@ namespace apiprojnew.Controllers
                 string.IsNullOrWhiteSpace(req.Auth))
                 return BadRequest("Invalid subscription data");
 
-            // Upsert: remove existing subscription for this endpoint, then add new
+            // Upsert: remove existing subscription for this endpoint across any user ID, then bind to current user
             var existing = await _db.PushSubscriptions
-                .Where(s => s.UserId == userId && s.Endpoint == req.Endpoint)
+                .Where(s => s.Endpoint == req.Endpoint)
                 .ToListAsync();
 
             _db.PushSubscriptions.RemoveRange(existing);
@@ -63,6 +63,25 @@ namespace apiprojnew.Controllers
             return Ok(new { message = "Subscribed successfully" });
         }
 
+        // Send instant test notification to current user's registered browser devices
+        [HttpPost("test-push")]
+        [Authorize]
+        public async Task<IActionResult> SendTestPush()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out int userId))
+                return Unauthorized();
+
+            var count = await _db.PushSubscriptions.CountAsync(s => s.UserId == userId);
+            if (count == 0)
+            {
+                return BadRequest(new { message = "No browser push subscription found for your account. Please tap the Bell icon in the navbar to subscribe." });
+            }
+
+            await _pushService.SendToUserAsync(userId, "🔔 Test Notification — GETO Project", "Test push notification works successfully on your browser!", "/dashboard");
+            return Ok(new { message = $"Test notification sent to {count} device(s)!" });
+        }
+
         // Remove subscription (user unsubscribed in browser)
         [HttpDelete("unsubscribe")]
         [Authorize]
@@ -73,7 +92,7 @@ namespace apiprojnew.Controllers
                 return Unauthorized();
 
             var subs = await _db.PushSubscriptions
-                .Where(s => s.UserId == userId && s.Endpoint == req.Endpoint)
+                .Where(s => s.Endpoint == req.Endpoint)
                 .ToListAsync();
 
             _db.PushSubscriptions.RemoveRange(subs);

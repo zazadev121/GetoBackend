@@ -35,6 +35,7 @@ namespace apiprojnew.Common
                 .Where(s => s.UserId == userId)
                 .ToListAsync();
 
+            Console.WriteLine($"[WebPush] Sending push notification to {subs.Count} subscription(s) for user ID {userId} (Title: '{title}')...");
             await SendBatchAsync(subs, title, body, url);
         }
 
