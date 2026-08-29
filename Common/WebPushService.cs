@@ -78,13 +78,23 @@ namespace apiprojnew.Common
             });
 
             var staleIds = new List<int>();
+            var pushOptions = new Dictionary<string, object>
+            {
+                { "vapidDetails", _vapid },
+                { "headers", new Dictionary<string, string>
+                    {
+                        { "Urgency", "high" },
+                        { "TTL", "86400" }
+                    }
+                }
+            };
 
             foreach (var sub in subscriptions)
             {
                 try
                 {
                     var pushSub = new PushSubscription(sub.Endpoint, sub.P256dh, sub.Auth);
-                    await _client.SendNotificationAsync(pushSub, payload, _vapid);
+                    await _client.SendNotificationAsync(pushSub, payload, pushOptions);
                 }
                 catch (WebPushException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Gone
                                                 || ex.StatusCode == System.Net.HttpStatusCode.NotFound)
