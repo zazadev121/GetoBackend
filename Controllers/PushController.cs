@@ -72,14 +72,71 @@ namespace apiprojnew.Controllers
             if (!int.TryParse(userIdClaim, out int userId))
                 return Unauthorized();
 
+            if (!_pushService.IsConfigured)
+                return StatusCode(500, new { message = "Push is not configured on the server." });
+
             var count = await _db.PushSubscriptions.CountAsync(s => s.UserId == userId);
             if (count == 0)
             {
-                return BadRequest(new { message = "No browser push subscription found for your account. Please tap the Bell icon in the navbar to subscribe." });
+                return BadRequest(new { message = "No browser push subscription found for your account. Please tap the Bell icon to subscribe." });
             }
 
-            await _pushService.SendToUserAsync(userId, "🔔 Test Notification — GETO Project", "Test push notification works successfully on your browser!", "/dashboard");
-            return Ok(new { message = $"Test notification sent to {count} device(s)!" });
+            var result = await _pushService.SendToUserAsync(
+                userId,
+                "🔔 Test Notification — GETO Project",
+                "Push works. You will get updates like this with the app closed.",
+                "/dashboard");
+
+            // Report what actually happened, so a silent failure can't look like success.
+            if (result.Delivered == 0)
+            {
+                return StatusCode(502, new
+                {
+                    message = "Push could not be delivered to any device.",
+                    attempted = result.Attempted,
+                    removed = result.Removed,
+                    failures = result.Failures
+                });
+            }
+
+            return Ok(new
+            {
+                message = $"Test notification delivered to {result.Delivered} of {result.Attempted} device(s).",
+                delivered = result.Delivered,
+                attempted = result.Attempted,
+                removed = result.Removed,
+                failures = result.Failures
+            });
+        }
+
+        // Where does the chain break? Answers it without needing server logs.
+        [HttpGet("diagnostics")]
+        [Authorize]
+        public async Task<IActionResult> Diagnostics()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out int userId))
+                return Unauthorized();
+
+            var subs = await _db.PushSubscriptions
+                .Where(s => s.UserId == userId)
+                .OrderByDescending(s => s.CreatedAt)
+                .ToListAsync();
+
+            return Ok(new
+            {
+                serverConfigured = _pushService.IsConfigured,
+                deviceCount = subs.Count,
+                devices = subs.Select(s => new
+                {
+                    provider = WebPushService.Provider(s.Endpoint),
+                    // Only a short fingerprint — an endpoint is a delivery credential.
+                    endpointHint = s.Endpoint.Length > 24
+                        ? s.Endpoint[..12] + "…" + s.Endpoint[^8..]
+                        : s.Endpoint,
+                    registeredAt = s.CreatedAt
+                })
+            });
         }
 
         // Remove subscription (user unsubscribed in browser)

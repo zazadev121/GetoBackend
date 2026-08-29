@@ -93,7 +93,7 @@ namespace apiprojnew.Services.News
                 await _context.SaveChangesAsync();
 
                 // Push notification to all subscribers
-                _ = _pushService.SendToAllAsync(
+                await _pushService.SendToAllAsync(
                     "📰 სიახლე — GETO Project",
                     newsItem.Title,
                     $"/news/{newsItem.Id}"

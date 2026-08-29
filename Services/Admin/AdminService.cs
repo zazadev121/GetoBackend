@@ -52,7 +52,7 @@ namespace apiprojnew.Services.Admin
                 await _db.SaveChangesAsync();
 
                 // Notify all users: new document added for their phase
-                _ = _pushService.SendToAllAsync(
+                await _pushService.SendToAllAsync(
                     "📎 ახალი ფაილი — GETO Project",
                     $"ახალი დოკუმენტი დაემატა თქვენს კაბინეტში: {fileName}",
                     "/dashboard"
@@ -172,7 +172,7 @@ namespace apiprojnew.Services.Admin
                 if (oldStatus != status)
                 {
                     SendStatusNotificationEmail(user, oldStatus, status, comment);
-                    _ = _pushService.SendToUserAsync(userId, GetStatusPushTitle(status), GetStatusPushBody(status), "/dashboard");
+                    await _pushService.SendToUserAsync(userId, GetStatusPushTitle(status), GetStatusPushBody(status), "/dashboard");
                 }
 
                 return Result<string>.Ok($"User status updated to {status}");
@@ -201,7 +201,7 @@ namespace apiprojnew.Services.Admin
                 if (oldPhase != phase)
                 {
                     SendPhaseNotificationEmail(user, oldPhase, phase, comment);
-                    _ = _pushService.SendToUserAsync(userId, GetPhasePushTitle(phase), GetPhasePushBody(phase), "/dashboard");
+                    await _pushService.SendToUserAsync(userId, GetPhasePushTitle(phase), GetPhasePushBody(phase), "/dashboard");
                 }
 
                 return Result<string>.Ok($"User phase updated to {phase}");
