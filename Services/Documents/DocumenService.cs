@@ -9,6 +9,11 @@ namespace apiprojnew.Services.Documents
 {
     public class DocumentService : IDocumentService
     {
+        private static bool IsPhaseOneResumeTemplate(string fileName)
+        {
+            return !string.IsNullOrWhiteSpace(fileName) && fileName.Trim().Equals("Resume--.docx", StringComparison.OrdinalIgnoreCase);
+        }
+
         private static List<DocumentDTO> DeduplicateDocuments(IEnumerable<DocumentDTO> documents)
         {
             return documents
@@ -209,6 +214,12 @@ namespace apiprojnew.Services.Documents
                     .ToListAsync();
 
                 var dedupedDocuments = DeduplicateDocuments(documents);
+                if (user.UserPahse == Enum.UserPahse.phaseone)
+                {
+                    dedupedDocuments = dedupedDocuments
+                        .Where(d => IsPhaseOneResumeTemplate(d.FileName))
+                        .ToList();
+                }
 
                 if (!dedupedDocuments.Any())
                 {
@@ -251,6 +262,12 @@ namespace apiprojnew.Services.Documents
                     .ToListAsync();
 
                 var dedupedDocuments = DeduplicateDocuments(documents);
+                if (user.UserPahse == Enum.UserPahse.phaseone)
+                {
+                    dedupedDocuments = dedupedDocuments
+                        .Where(d => IsPhaseOneResumeTemplate(d.FileName))
+                        .ToList();
+                }
 
                 if (!dedupedDocuments.Any())
                 {

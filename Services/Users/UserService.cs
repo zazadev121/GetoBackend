@@ -1,6 +1,7 @@
 using apiprojnew.Common;
 using apiprojnew.Data;
 using apiprojnew.DTO;
+using apiprojnew.Enum;
 using apiprojnew.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -185,6 +186,13 @@ namespace apiprojnew.Services.Users
                 .Select(g => g.OrderByDescending(d => d.UploadedAt).First())
                 .OrderByDescending(d => d.UploadedAt)
                 .ToList();
+
+            if (user.UserPahse == UserPahse.phaseone)
+            {
+                documents = documents
+                    .Where(d => d.FileName.Trim().Equals("Resume--.docx", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
 
             var dto = new UserWithDocumentsDTO
             {

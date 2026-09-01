@@ -9,6 +9,11 @@ namespace apiprojnew.Services.Admin
 {
     public class AdminService : IAdminService
     {
+        private static bool IsPhaseOneResumeTemplate(string fileName)
+        {
+            return !string.IsNullOrWhiteSpace(fileName) && fileName.Trim().Equals("Resume--.docx", StringComparison.OrdinalIgnoreCase);
+        }
+
         private static List<DocumentDTO> DeduplicateDocuments(IEnumerable<DocumentDTO> documents)
         {
             return documents
@@ -31,6 +36,11 @@ namespace apiprojnew.Services.Admin
 
         public async Task<Result<int>> AddDocumentForAllUsersAsync(string fileName, string contentType, byte[] fileData, UserPahse phase)
         {
+            if (phase == UserPahse.phaseone && !IsPhaseOneResumeTemplate(fileName))
+            {
+                return Result<int>.BadRequest("In phase one, only Resume--.docx can be added.");
+            }
+
             // Validate file data
             if (fileData == null || fileData.Length == 0)
             {
@@ -95,6 +105,11 @@ namespace apiprojnew.Services.Admin
 
         public async Task<Result<int>> SendDocumentToSingleUserAsync(int userId, string fileName, string contentType, byte[] fileData, UserPahse phase, string? adminNote = null)
         {
+            if (phase == UserPahse.phaseone && !IsPhaseOneResumeTemplate(fileName))
+            {
+                return Result<int>.BadRequest("In phase one, only Resume--.docx can be added.");
+            }
+
             if (fileData == null || fileData.Length == 0)
             {
                 return Result<int>.BadRequest("No file data provided");
@@ -564,6 +579,24 @@ namespace apiprojnew.Services.Admin
 
         private static UserWithDocumentsDTO MapUserToDTO(Models.User user)
         {
+            var documents = DeduplicateDocuments(user.Documents.Select(d => new DocumentDTO
+            {
+                Id = d.Id,
+                FileName = d.FileName,
+                ContentType = d.ContentType,
+                FileSize = d.FileData.Length,
+                UploadedAt = d.UploadedAt,
+                Phase = d.Phase,
+                IsAdminUploaded = d.IsAdminUploaded
+            })).ToList();
+
+            if (user.UserPahse == UserPahse.phaseone)
+            {
+                documents = documents
+                    .Where(d => d.FileName.Trim().Equals("Resume--.docx", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
             return new UserWithDocumentsDTO
             {
                 Id = user.Id,
@@ -575,16 +608,7 @@ namespace apiprojnew.Services.Admin
                 Status = user.Status,
                 UserPhase = user.UserPahse,
                 IsVerified = user.IsVerified,
-                Documents = DeduplicateDocuments(user.Documents.Select(d => new DocumentDTO
-                {
-                    Id = d.Id,
-                    FileName = d.FileName,
-                    ContentType = d.ContentType,
-                    FileSize = d.FileData.Length,
-                    UploadedAt = d.UploadedAt,
-                    Phase = d.Phase,
-                    IsAdminUploaded = d.IsAdminUploaded
-                })).ToList()
+                Documents = documents
             };
         }
 
