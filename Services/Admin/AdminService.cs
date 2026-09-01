@@ -37,20 +37,35 @@ namespace apiprojnew.Services.Admin
                     return Result<int>.BadRequest("No users found in the system");
                 }
 
-                // Create a document for each user with the specified phase
-                var documents = allUsers.Select(user => new Models.Document
-                {
-                    UserId = user.Id,
-                    FileName = fileName,
-                    ContentType = contentType,
-                    FileData = fileData,
-                    UploadedAt = DateTime.UtcNow,
-                    Phase = phase,
-                    IsAdminUploaded = true
-                }).ToList();
+                // Get set of user IDs that already have this exact file for this phase (avoid duplicates)
+                var existingUserIds = await _db.Documents
+                    .Where(d => d.IsAdminUploaded && d.Phase == phase && d.FileName.ToLower() == fileName.ToLower())
+                    .Select(d => d.UserId)
+                    .ToHashSetAsync();
 
-                _db.Documents.AddRange(documents);
+                // Only create documents for users who don't already have this file
+                var newDocuments = allUsers
+                    .Where(user => !existingUserIds.Contains(user.Id))
+                    .Select(user => new Models.Document
+                    {
+                        UserId = user.Id,
+                        FileName = fileName,
+                        ContentType = contentType,
+                        FileData = fileData,
+                        UploadedAt = DateTime.UtcNow,
+                        Phase = phase,
+                        IsAdminUploaded = true
+                    }).ToList();
+
+                if (!newDocuments.Any())
+                {
+                    return Result<int>.Ok(0); // All users already have this file
+                }
+
+                _db.Documents.AddRange(newDocuments);
                 await _db.SaveChangesAsync();
+
+                var documents = newDocuments;
 
                 // Notify all users: new document added for their phase
                 await _pushService.SendToAllAsync(
