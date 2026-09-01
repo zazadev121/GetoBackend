@@ -547,7 +547,8 @@ namespace apiprojnew.Services.Admin
                     ContentType = d.ContentType,
                     FileSize = d.FileData.Length,
                     UploadedAt = d.UploadedAt,
-                    Phase = d.Phase
+                    Phase = d.Phase,
+                    IsAdminUploaded = d.IsAdminUploaded
                 }).ToList()
             };
         }
