@@ -1,4 +1,4 @@
-﻿using apiprojnew.Common;
+using apiprojnew.Common;
 using apiprojnew.DTO;
 using apiprojnew.Enum;
 using Microsoft.AspNetCore.Http;
@@ -15,5 +15,6 @@ namespace apiprojnew.Services.Documents
         Task<Result<List<DocumentDTO>>> GetAdminDocumentsByUserPhaseAsync(int userId);
         Task<Result<byte[]>> GetAdminDocumentAsync(int documentId, int userId);
         Task<Result<string>> DeleteDocumentAsync(int documentId, int userId);
+        Task<Result<(byte[] data, string contentType, string fileName)>> GetDocumentDirectAsync(int documentId);
     }
 }

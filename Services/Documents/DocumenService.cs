@@ -1,4 +1,4 @@
-﻿using apiprojnew.Common;
+using apiprojnew.Common;
 using apiprojnew.Data;
 using apiprojnew.DTO;
 using apiprojnew.Models;
@@ -120,7 +120,8 @@ namespace apiprojnew.Services.Documents
                     ContentType = d.ContentType,
                     FileSize = d.FileData.Length,
                     UploadedAt = d.UploadedAt,
-                    Phase = d.Phase
+                    Phase = d.Phase,
+                    IsAdminUploaded = d.IsAdminUploaded
                 })
                 .ToListAsync();
 
@@ -164,7 +165,8 @@ namespace apiprojnew.Services.Documents
                 ContentType = document.ContentType,
                 FileSize = document.FileData.Length,
                 UploadedAt = document.UploadedAt,
-                Phase = document.Phase
+                Phase = document.Phase,
+                IsAdminUploaded = document.IsAdminUploaded
             };
 
             return Result<DocumentDTO>.Ok(documentDto);
@@ -192,7 +194,8 @@ namespace apiprojnew.Services.Documents
                         ContentType = d.ContentType,
                         FileSize = d.FileData.Length,
                         UploadedAt = d.UploadedAt,
-                        Phase = d.Phase
+                        Phase = d.Phase,
+                        IsAdminUploaded = d.IsAdminUploaded
                     })
                     .ToListAsync();
 
@@ -231,7 +234,8 @@ namespace apiprojnew.Services.Documents
                         ContentType = d.ContentType,
                         FileSize = d.FileData.Length,
                         UploadedAt = d.UploadedAt,
-                        Phase = d.Phase
+                        Phase = d.Phase,
+                        IsAdminUploaded = d.IsAdminUploaded
                     })
                     .ToListAsync();
 
@@ -267,6 +271,16 @@ namespace apiprojnew.Services.Documents
             }
 
             return Result<byte[]>.Ok(document.FileData);
+        }
+
+        public async Task<Result<(byte[] data, string contentType, string fileName)>> GetDocumentDirectAsync(int documentId)
+        {
+            var document = await _db.Documents.FirstOrDefaultAsync(d => d.Id == documentId);
+            if (document == null)
+            {
+                return Result<(byte[] data, string contentType, string fileName)>.NotFound("Document not found");
+            }
+            return Result<(byte[] data, string contentType, string fileName)>.Ok((document.FileData, document.ContentType, document.FileName));
         }
     }
 }

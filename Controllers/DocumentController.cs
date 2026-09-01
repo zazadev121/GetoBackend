@@ -1,4 +1,4 @@
-﻿using apiprojnew.Services.Documents;
+using apiprojnew.Services.Documents;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -143,6 +143,19 @@ namespace apiprojnew.Controllers
             var document = documentsResult.Data?.FirstOrDefault(d => d.Id == documentId);
 
             return File(response.Data, document?.ContentType ?? "application/octet-stream", document?.FileName ?? "document");
+        }
+
+        [HttpGet("direct-download/{documentId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> DirectDownload(int documentId)
+        {
+            var response = await _documentService.GetDocumentDirectAsync(documentId);
+            if (response.StatusCode != 200)
+            {
+                return StatusCode(response.StatusCode, response.Message);
+            }
+
+            return File(response.Data.data, response.Data.contentType ?? "application/octet-stream", response.Data.fileName ?? "document");
         }
     }
 }

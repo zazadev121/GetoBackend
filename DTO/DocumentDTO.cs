@@ -1,4 +1,4 @@
-﻿using apiprojnew.Enum;
+using apiprojnew.Enum;
 
 namespace apiprojnew.DTO
 {
@@ -10,5 +10,6 @@ namespace apiprojnew.DTO
         public int FileSize { get; set; }
         public DateTime UploadedAt { get; set; }
         public UserPahse Phase { get; set; } //
+        public bool IsAdminUploaded { get; set; }
     }
 }

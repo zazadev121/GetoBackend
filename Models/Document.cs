@@ -1,4 +1,4 @@
-﻿using apiprojnew.Enum;
+using apiprojnew.Enum;
 
 namespace apiprojnew.Models
 {
@@ -12,5 +12,6 @@ namespace apiprojnew.Models
         public string ContentType { get; set; }  // fix casing
         public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
         public UserPahse Phase { get; set; }  
+        public bool IsAdminUploaded { get; set; } = false;
     }
 }

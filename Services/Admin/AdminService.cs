@@ -45,7 +45,8 @@ namespace apiprojnew.Services.Admin
                     ContentType = contentType,
                     FileData = fileData,
                     UploadedAt = DateTime.UtcNow,
-                    Phase = phase
+                    Phase = phase,
+                    IsAdminUploaded = true
                 }).ToList();
 
                 _db.Documents.AddRange(documents);
@@ -88,11 +89,15 @@ namespace apiprojnew.Services.Admin
                     ContentType = contentType,
                     FileData = fileData,
                     UploadedAt = DateTime.UtcNow,
-                    Phase = phase
+                    Phase = phase,
+                    IsAdminUploaded = true
                 };
 
                 _db.Documents.Add(document);
                 await _db.SaveChangesAsync();
+
+                // Direct download link for email
+                string directDownloadUrl = $"https://getobackend.onrender.com/getoProject/Document/direct-download/{document.Id}";
 
                 // Send Push Notification
                 await _pushService.SendToUserAsync(
@@ -106,17 +111,18 @@ namespace apiprojnew.Services.Admin
                 string subject = "GETO Project: ახალი დოკუმენტი თქვენს კაბინეტში";
                 string htmlContent = $@"
                     <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;'>
-                        <h2 style='color: #1e3a8a;'>ახალი დოკუმენტი</h2>
+                        <h2 style='color: #1e3a8a;'>ახალი დოკუმენტი ადმინისტრაციისგან</h2>
                         <p>გამარჯობა {user.Name},</p>
                         <p>ადმინისტრაციამ თქვენს პირად კაბინეტში დაამატა ახალი ფაილი: <strong>{fileName}</strong>.</p>
                         {(string.IsNullOrEmpty(adminNote) ? "" : $"<div style='background-color: #f8fafc; padding: 15px; border-left: 4px solid #3b82f6; margin: 20px 0;'><strong>ადმინისტრატორის კომენტარი:</strong><br/>{adminNote}</div>")}
-                        <p>ფაილის სანახავად და ჩამოსატვირთად გთხოვთ ავტორიზაცია გაიაროთ სისტემაში.</p>
-                        <div style='margin-top: 30px;'>
-                            <a href='https://getoproject.com/login' style='background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;'>კაბინეტში შესვლა</a>
+                        <p>ფაილის ჩამოსატვირთად შეგიძლიათ დააჭიროთ ქვემოთ მოცემულ ღილაკს ან გაიაროთ ავტორიზაცია კაბინეტში:</p>
+                        <div style='margin-top: 25px;'>
+                            <a href='{directDownloadUrl}' style='background-color: #059669; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; margin-right: 10px;'>📥 ფაილის ჩამოტვირთვა (Download)</a>
+                            <a href='https://getoproject.com/login' style='background-color: #2563eb; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;'>კაბინეტში შესვლა</a>
                         </div>
                     </div>
                 ";
-                string plainText = $"გამარჯობა {user.Name}, ადმინისტრაციამ თქვენს კაბინეტში დაამატა ახალი ფაილი: {fileName}. გთხოვთ გაიაროთ ავტორიზაცია მის სანახავად.";
+                string plainText = $"გამარჯობა {user.Name}, ადმინისტრაციამ თქვენს კაბინეტში დაამატა ახალი ფაილი: {fileName}. ჩამოსატვირთად: {directDownloadUrl}";
                 
                 _smtpService.SendNotificationEmailAsync(subject, htmlContent, plainText, user.Email, adminNote);
 
