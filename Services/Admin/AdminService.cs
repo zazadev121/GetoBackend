@@ -9,12 +9,14 @@ namespace apiprojnew.Services.Admin
 {
     public class AdminService : IAdminService
     {
-        private static bool IsPhaseOneResumeTemplate(string fileName)
-        {
-            return !string.IsNullOrWhiteSpace(fileName) && fileName.Trim().Equals("Resume--.docx", StringComparison.OrdinalIgnoreCase);
-        }
-
         private static List<DocumentDTO> DeduplicateDocuments(IEnumerable<DocumentDTO> documents)
+        {
+            return documents
+                .GroupBy(d => d.FileName.Trim(), StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.OrderByDescending(d => d.UploadedAt).First())
+                .OrderByDescending(d => d.UploadedAt)
+                .ToList();
+        }
         {
             return documents
                 .GroupBy(d => d.FileName.Trim(), StringComparer.OrdinalIgnoreCase)
@@ -36,11 +38,6 @@ namespace apiprojnew.Services.Admin
 
         public async Task<Result<int>> AddDocumentForAllUsersAsync(string fileName, string contentType, byte[] fileData, UserPahse phase)
         {
-            if (phase == UserPahse.phaseone && !IsPhaseOneResumeTemplate(fileName))
-            {
-                return Result<int>.BadRequest("In phase one, only Resume--.docx can be added.");
-            }
-
             // Validate file data
             if (fileData == null || fileData.Length == 0)
             {
@@ -105,11 +102,6 @@ namespace apiprojnew.Services.Admin
 
         public async Task<Result<int>> SendDocumentToSingleUserAsync(int userId, string fileName, string contentType, byte[] fileData, UserPahse phase, string? adminNote = null)
         {
-            if (phase == UserPahse.phaseone && !IsPhaseOneResumeTemplate(fileName))
-            {
-                return Result<int>.BadRequest("In phase one, only Resume--.docx can be added.");
-            }
-
             if (fileData == null || fileData.Length == 0)
             {
                 return Result<int>.BadRequest("No file data provided");
@@ -589,13 +581,6 @@ namespace apiprojnew.Services.Admin
                 Phase = d.Phase,
                 IsAdminUploaded = d.IsAdminUploaded
             })).ToList();
-
-            if (user.UserPahse == UserPahse.phaseone)
-            {
-                documents = documents
-                    .Where(d => d.FileName.Trim().Equals("Resume--.docx", StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-            }
 
             return new UserWithDocumentsDTO
             {

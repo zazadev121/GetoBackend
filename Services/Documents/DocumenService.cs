@@ -9,12 +9,14 @@ namespace apiprojnew.Services.Documents
 {
     public class DocumentService : IDocumentService
     {
-        private static bool IsPhaseOneResumeTemplate(string fileName)
-        {
-            return !string.IsNullOrWhiteSpace(fileName) && fileName.Trim().Equals("Resume--.docx", StringComparison.OrdinalIgnoreCase);
-        }
-
         private static List<DocumentDTO> DeduplicateDocuments(IEnumerable<DocumentDTO> documents)
+        {
+            return documents
+                .GroupBy(d => d.FileName.Trim(), StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.OrderByDescending(d => d.UploadedAt).First())
+                .OrderByDescending(d => d.UploadedAt)
+                .ToList();
+        }
         {
             return documents
                 .GroupBy(d => d.FileName.Trim(), StringComparer.OrdinalIgnoreCase)

@@ -187,13 +187,6 @@ namespace apiprojnew.Services.Users
                 .OrderByDescending(d => d.UploadedAt)
                 .ToList();
 
-            if (user.UserPahse == UserPahse.phaseone)
-            {
-                documents = documents
-                    .Where(d => d.FileName.Trim().Equals("Resume--.docx", StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-            }
-
             var dto = new UserWithDocumentsDTO
             {
                 Id = user.Id,
