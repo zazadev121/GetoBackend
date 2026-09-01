@@ -17,13 +17,6 @@ namespace apiprojnew.Services.Admin
                 .OrderByDescending(d => d.UploadedAt)
                 .ToList();
         }
-        {
-            return documents
-                .GroupBy(d => d.FileName.Trim(), StringComparer.OrdinalIgnoreCase)
-                .Select(g => g.OrderByDescending(d => d.UploadedAt).First())
-                .OrderByDescending(d => d.UploadedAt)
-                .ToList();
-        }
 
         private readonly DataContext _db;
         private readonly SmtpService _smtpService;
