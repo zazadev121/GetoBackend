@@ -38,10 +38,10 @@ namespace apiprojnew.Services.Admin
                 }
 
                 // Get set of user IDs that already have this exact file for this phase (avoid duplicates)
-                var existingUserIds = await _db.Documents
+                var existingUserIds = (await _db.Documents
                     .Where(d => d.IsAdminUploaded && d.Phase == phase && d.FileName.ToLower() == fileName.ToLower())
                     .Select(d => d.UserId)
-                    .ToHashSetAsync();
+                    .ToListAsync()).ToHashSet();
 
                 // Only create documents for users who don't already have this file
                 var newDocuments = allUsers
