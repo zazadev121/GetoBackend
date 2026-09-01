@@ -8,6 +8,7 @@ namespace apiprojnew.Services.Admin
     {
         // Document Management
         Task<Result<int>> AddDocumentForAllUsersAsync(string fileName, string contentType, byte[] fileData, UserPahse phase);
+        Task<Result<int>> SendDocumentToSingleUserAsync(int userId, string fileName, string contentType, byte[] fileData, UserPahse phase, string? adminNote = null);
         
         // User Retrieval   
         Task<Result<List<UserWithDocumentsDTO>>> GetAllUsersWithDocumentsAsync();
