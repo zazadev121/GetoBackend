@@ -586,5 +586,18 @@ namespace apiprojnew.Services.Admin
             UserPahse.phaseCanceled => "თქვენი ეტაპი გაუქმებულია. კითხვებისთვის დაგვიკავშირდით.",
             _                       => "თქვენი ეტაპი განახლდა."
         };
+
+        public async Task<Result<bool>> ToggleDocumentAdminUploadedAsync(int documentId)
+        {
+            var doc = await _db.Documents.FirstOrDefaultAsync(d => d.Id == documentId);
+            if (doc == null)
+            {
+                return Result<bool>.NotFound("Document not found");
+            }
+
+            doc.IsAdminUploaded = !doc.IsAdminUploaded;
+            await _db.SaveChangesAsync();
+            return Result<bool>.Ok(doc.IsAdminUploaded);
+        }
     }
 }

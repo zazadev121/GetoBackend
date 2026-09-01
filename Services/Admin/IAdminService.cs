@@ -27,5 +27,6 @@ namespace apiprojnew.Services.Admin
         Task<Result<string>> DeleteUserDocumentsOnlyAsync(int userId);
         Task<Result<string>> DeleteDocumentByIdAsync(int documentId);
         Task<Result<string>> DeleteBulkDocumentsByFileNameAsync(string fileName);
+        Task<Result<bool>> ToggleDocumentAdminUploadedAsync(int documentId);
     }
 }

@@ -199,6 +199,18 @@ namespace apiprojnew.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        [HttpPost("document/{documentId}/toggle-admin-uploaded")]
+        public async Task<IActionResult> ToggleAdminUploaded(int documentId)
+        {
+            if (!CheckAdminAccess())
+            {
+                return Forbid();
+            }
+
+            var response = await _adminService.ToggleDocumentAdminUploadedAsync(documentId);
+            return StatusCode(response.StatusCode, response);
+        }
+
         [HttpDelete("documents/bulk")]
         public async Task<IActionResult> DeleteBulkDocumentsByFileName([FromQuery] string fileName)
         {
