@@ -9,6 +9,15 @@ namespace apiprojnew.Services.Admin
 {
     public class AdminService : IAdminService
     {
+        private static List<DocumentDTO> DeduplicateDocuments(IEnumerable<DocumentDTO> documents)
+        {
+            return documents
+                .GroupBy(d => d.FileName.Trim(), StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.OrderByDescending(d => d.UploadedAt).First())
+                .OrderByDescending(d => d.UploadedAt)
+                .ToList();
+        }
+
         private readonly DataContext _db;
         private readonly SmtpService _smtpService;
         private readonly WebPushService _pushService;
@@ -37,19 +46,21 @@ namespace apiprojnew.Services.Admin
                     return Result<int>.BadRequest("No users found in the system");
                 }
 
-                // Get set of user IDs that already have this exact file for this phase (avoid duplicates)
+                var normalizedFileName = fileName.Trim();
+
+                // Prevent creating the same file twice for the same user/phase, regardless of who uploaded it.
                 var existingUserIds = (await _db.Documents
-                    .Where(d => d.IsAdminUploaded && d.Phase == phase && d.FileName.ToLower() == fileName.ToLower())
+                    .Where(d => d.Phase == phase && d.FileName.ToLower() == normalizedFileName.ToLower())
                     .Select(d => d.UserId)
+                    .Distinct()
                     .ToListAsync()).ToHashSet();
 
-                // Only create documents for users who don't already have this file
                 var newDocuments = allUsers
                     .Where(user => !existingUserIds.Contains(user.Id))
                     .Select(user => new Models.Document
                     {
                         UserId = user.Id,
-                        FileName = fileName,
+                        FileName = normalizedFileName,
                         ContentType = contentType,
                         FileData = fileData,
                         UploadedAt = DateTime.UtcNow,
@@ -97,10 +108,19 @@ namespace apiprojnew.Services.Admin
                     return Result<int>.NotFound("User not found");
                 }
 
+                var normalizedFileName = fileName.Trim();
+                var existingDocument = await _db.Documents
+                    .FirstOrDefaultAsync(d => d.UserId == user.Id && d.Phase == phase && d.FileName.ToLower() == normalizedFileName.ToLower());
+
+                if (existingDocument != null)
+                {
+                    return Result<int>.Ok(existingDocument.Id);
+                }
+
                 var document = new Models.Document
                 {
                     UserId = user.Id,
-                    FileName = fileName,
+                    FileName = normalizedFileName,
                     ContentType = contentType,
                     FileData = fileData,
                     UploadedAt = DateTime.UtcNow,
@@ -555,7 +575,7 @@ namespace apiprojnew.Services.Admin
                 Status = user.Status,
                 UserPhase = user.UserPahse,
                 IsVerified = user.IsVerified,
-                Documents = user.Documents.Select(d => new DocumentDTO
+                Documents = DeduplicateDocuments(user.Documents.Select(d => new DocumentDTO
                 {
                     Id = d.Id,
                     FileName = d.FileName,
@@ -564,7 +584,7 @@ namespace apiprojnew.Services.Admin
                     UploadedAt = d.UploadedAt,
                     Phase = d.Phase,
                     IsAdminUploaded = d.IsAdminUploaded
-                }).ToList()
+                })).ToList()
             };
         }
 

@@ -9,6 +9,15 @@ namespace apiprojnew.Services.Documents
 {
     public class DocumentService : IDocumentService
     {
+        private static List<DocumentDTO> DeduplicateDocuments(IEnumerable<DocumentDTO> documents)
+        {
+            return documents
+                .GroupBy(d => d.FileName.Trim(), StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.OrderByDescending(d => d.UploadedAt).First())
+                .OrderByDescending(d => d.UploadedAt)
+                .ToList();
+        }
+
         private readonly DataContext _db;
         private readonly IConfiguration _configuration;
         private readonly string _uploadPath;
@@ -125,7 +134,7 @@ namespace apiprojnew.Services.Documents
                 })
                 .ToListAsync();
 
-            return Result<List<DocumentDTO>>.Ok(documents);
+            return Result<List<DocumentDTO>>.Ok(DeduplicateDocuments(documents));
         }
 
         public async Task<Result<string>> DeleteDocumentAsync(int documentId, int userId)
@@ -199,12 +208,14 @@ namespace apiprojnew.Services.Documents
                     })
                     .ToListAsync();
 
-                if (!documents.Any())
+                var dedupedDocuments = DeduplicateDocuments(documents);
+
+                if (!dedupedDocuments.Any())
                 {
                     return Result<List<DocumentDTO>>.NotFound($"No documents found for your current phase ({user.UserPahse})");
                 }
 
-                return Result<List<DocumentDTO>>.Ok(documents);
+                return Result<List<DocumentDTO>>.Ok(dedupedDocuments);
             }
             catch (Exception ex)
             {
@@ -239,12 +250,14 @@ namespace apiprojnew.Services.Documents
                     })
                     .ToListAsync();
 
-                if (!documents.Any())
+                var dedupedDocuments = DeduplicateDocuments(documents);
+
+                if (!dedupedDocuments.Any())
                 {
                     return Result<List<DocumentDTO>>.NotFound($"No documents found for your current phase ({user.UserPahse})");
                 }
 
-                return Result<List<DocumentDTO>>.Ok(documents);
+                return Result<List<DocumentDTO>>.Ok(dedupedDocuments);
             }
             catch (Exception ex)
             {

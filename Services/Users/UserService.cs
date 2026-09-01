@@ -170,6 +170,22 @@ namespace apiprojnew.Services.Users
                 return Result<UserWithDocumentsDTO>.NotFound("User not found");
             }
 
+            var documents = user.Documents
+                .Select(d => new DocumentDTO
+                {
+                    Id = d.Id,
+                    FileName = d.FileName,
+                    ContentType = d.ContentType,
+                    FileSize = d.FileData.Length,
+                    UploadedAt = d.UploadedAt,
+                    Phase = d.Phase,
+                    IsAdminUploaded = d.IsAdminUploaded
+                })
+                .GroupBy(d => d.FileName.Trim(), StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.OrderByDescending(d => d.UploadedAt).First())
+                .OrderByDescending(d => d.UploadedAt)
+                .ToList();
+
             var dto = new UserWithDocumentsDTO
             {
                 Id = user.Id,
@@ -181,16 +197,7 @@ namespace apiprojnew.Services.Users
                 Status = user.Status,
                 UserPhase = user.UserPahse,
                 IsVerified = user.IsVerified,
-                Documents = user.Documents.Select(d => new DocumentDTO
-                {
-                    Id = d.Id,
-                    FileName = d.FileName,
-                    ContentType = d.ContentType,
-                    FileSize = d.FileData.Length,
-                    UploadedAt = d.UploadedAt,
-                    Phase = d.Phase,
-                    IsAdminUploaded = d.IsAdminUploaded
-                }).ToList()
+                Documents = documents
             };
 
             return Result<UserWithDocumentsDTO>.Ok(dto);
