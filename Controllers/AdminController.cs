@@ -54,6 +54,31 @@ namespace apiprojnew.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        [HttpPost("document/send-to-user/{userId}")]
+        public async Task<IActionResult> SendDocumentToUser(int userId, [FromQuery] int phase, [FromQuery] string? note, IFormFile file)
+        {
+            if (!CheckAdminAccess())
+            {
+                return Forbid();
+            }
+
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest("No file provided");
+            }
+
+            byte[] fileData;
+            using (var memoryStream = new MemoryStream())
+            {
+                await file.CopyToAsync(memoryStream);
+                fileData = memoryStream.ToArray();
+            }
+
+            var phaseEnum = (UserPahse)phase;
+            var response = await _adminService.SendDocumentToSingleUserAsync(userId, file.FileName, file.ContentType, fileData, phaseEnum, note);
+            return StatusCode(response.StatusCode, response);
+        }
+
         [HttpGet("users")]
         public async Task<IActionResult> GetAllUsersWithDocuments()
         {
