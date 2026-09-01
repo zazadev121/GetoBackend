@@ -66,6 +66,68 @@ namespace apiprojnew.Services.Admin
             }
         }
 
+        public async Task<Result<int>> SendDocumentToSingleUserAsync(int userId, string fileName, string contentType, byte[] fileData, UserPahse phase, string? adminNote = null)
+        {
+            if (fileData == null || fileData.Length == 0)
+            {
+                return Result<int>.BadRequest("No file data provided");
+            }
+
+            try
+            {
+                var user = await _db.Users.FindAsync(userId);
+                if (user == null)
+                {
+                    return Result<int>.NotFound("User not found");
+                }
+
+                var document = new Models.Document
+                {
+                    UserId = user.Id,
+                    FileName = fileName,
+                    ContentType = contentType,
+                    FileData = fileData,
+                    UploadedAt = DateTime.UtcNow,
+                    Phase = phase
+                };
+
+                _db.Documents.Add(document);
+                await _db.SaveChangesAsync();
+
+                // Send Push Notification
+                await _pushService.SendToUserAsync(
+                    user.Id,
+                    "📎 ახალი ფაილი ადმინისტრაციისგან",
+                    $"თქვენს პირად კაბინეტში დაემატა ახალი ფაილი: {fileName}",
+                    "/dashboard"
+                );
+
+                // Send Email Notification
+                string subject = "GETO Project: ახალი დოკუმენტი თქვენს კაბინეტში";
+                string htmlContent = $@"
+                    <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;'>
+                        <h2 style='color: #1e3a8a;'>ახალი დოკუმენტი</h2>
+                        <p>გამარჯობა {user.Name},</p>
+                        <p>ადმინისტრაციამ თქვენს პირად კაბინეტში დაამატა ახალი ფაილი: <strong>{fileName}</strong>.</p>
+                        {(string.IsNullOrEmpty(adminNote) ? "" : $"<div style='background-color: #f8fafc; padding: 15px; border-left: 4px solid #3b82f6; margin: 20px 0;'><strong>ადმინისტრატორის კომენტარი:</strong><br/>{adminNote}</div>")}
+                        <p>ფაილის სანახავად და ჩამოსატვირთად გთხოვთ ავტორიზაცია გაიაროთ სისტემაში.</p>
+                        <div style='margin-top: 30px;'>
+                            <a href='https://getoproject.com/login' style='background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;'>კაბინეტში შესვლა</a>
+                        </div>
+                    </div>
+                ";
+                string plainText = $"გამარჯობა {user.Name}, ადმინისტრაციამ თქვენს კაბინეტში დაამატა ახალი ფაილი: {fileName}. გთხოვთ გაიაროთ ავტორიზაცია მის სანახავად.";
+                
+                _smtpService.SendNotificationEmailAsync(subject, htmlContent, plainText, user.Email, adminNote);
+
+                return Result<int>.Ok(1);
+            }
+            catch (Exception ex)
+            {
+                return Result<int>.BadRequest($"Error sending document to user: {ex.Message}");
+            }
+        }
+
         public async Task<Result<List<UserWithDocumentsDTO>>> GetAllUsersWithDocumentsAsync()
         {
             try
