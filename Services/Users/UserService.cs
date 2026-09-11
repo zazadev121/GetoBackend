@@ -206,26 +206,34 @@ namespace apiprojnew.Services.Users
 
         private string GenerateJwtToken(User user)
         {
-            var securityKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
-            var credentials = new SigningCredentials(
-                securityKey, SecurityAlgorithms.HmacSha256);
+            var jwtKey = _configuration["Jwt:Key"] 
+                ?? _configuration["JWT_KEY"] 
+                ?? "DefaultSuperSecretKeyForGetoProjectJwtAuthentication2026!#$";
+            var jwtIssuer = _configuration["Jwt:Issuer"] 
+                ?? _configuration["JWT_ISSUER"] 
+                ?? "your-issuer";
+            var jwtAudience = _configuration["Jwt:Audience"] 
+                ?? _configuration["JWT_AUDIENCE"] 
+                ?? "your-audience";
+
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
             var claims = new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                new Claim(JwtRegisteredClaimNames.Name, user.Name),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                new Claim(JwtRegisteredClaimNames.Name, user.Name ?? ""),
+                new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim("UserId", user.Id.ToString()),
                 new Claim(ClaimTypes.Role, user.Role.ToString())
             };
 
             var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
+                issuer: jwtIssuer,
+                audience: jwtAudience,
                 claims: claims,
-                expires: DateTime.Now.AddMonths(1),
+                expires: DateTime.UtcNow.AddMonths(1),
                 signingCredentials: credentials
             );
 

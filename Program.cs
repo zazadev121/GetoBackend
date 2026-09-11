@@ -68,6 +68,16 @@ builder.Services.AddSwaggerGen(option =>
 });
 });
 
+var jwtKey = builder.Configuration["Jwt:Key"] 
+    ?? builder.Configuration["JWT_KEY"] 
+    ?? "DefaultSuperSecretKeyForGetoProjectJwtAuthentication2026!#$";
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] 
+    ?? builder.Configuration["JWT_ISSUER"] 
+    ?? "your-issuer";
+var jwtAudience = builder.Configuration["Jwt:Audience"] 
+    ?? builder.Configuration["JWT_AUDIENCE"] 
+    ?? "your-audience";
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -77,14 +87,13 @@ builder.Services.AddAuthentication(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
+        ValidateIssuer = false,
+        ValidateAudience = false,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+        ValidIssuer = jwtIssuer,
+        ValidAudience = jwtAudience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
     };
 });
 
