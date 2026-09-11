@@ -274,8 +274,13 @@ namespace apiprojnew.Services.Admin
 
                 if (oldStatus != status)
                 {
-                    SendStatusNotificationEmail(user, oldStatus, status, comment);
-                    await _pushService.SendToUserAsync(userId, GetStatusPushTitle(status), GetStatusPushBody(status), "/dashboard");
+                    // SendStatusNotificationEmail(user, oldStatus, status, comment);
+                    string pushBody = GetStatusPushBody(status);
+                    if (!string.IsNullOrWhiteSpace(comment))
+                    {
+                        pushBody += $" | {comment.Trim()}";
+                    }
+                    await _pushService.SendToUserAsync(userId, GetStatusPushTitle(status), pushBody, "/dashboard");
                 }
 
                 return Result<string>.Ok($"User status updated to {status}");
