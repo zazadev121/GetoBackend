@@ -18,10 +18,14 @@ namespace apiprojnew.Common
             _logger = logger;
         }
 
+        /// <summary>
+        /// Sends verification / password-reset code emails ONLY.
+        /// Do NOT use this for phase/status notifications — use push notifications instead.
+        /// </summary>
         public void SendEmailAsync(string subject, string body, string email)
         {
             string code = body.Replace("Code : ", "").Replace("Your verification code is: ", "").Trim();
-            
+
             _logger.LogInformation($"[EMAIL FOR {email}]: Subject: {subject} | Content: {code}");
             Console.WriteLine($"[EMAIL FOR {email}]: Subject: {subject} | Content: {code}");
 
@@ -32,37 +36,30 @@ namespace apiprojnew.Common
             });
         }
 
-        public void SendNotificationEmailAsync(string subject, string htmlContent, string plainTextMessage, string recipientEmail, string? customComment = null)
-        {
-            // Notification emails (phase/status/document) are DISABLED — push notifications only.
-            _logger.LogInformation($"[NOTIFICATION EMAIL SUPPRESSED for {recipientEmail}]: Subject: '{subject}' — no email sent.");
-            Console.WriteLine($"[NOTIFICATION EMAIL SUPPRESSED for {recipientEmail}]: Subject: '{subject}' — no email sent.");
-        }
-
-        private async Task DispatchEmailAsync(string subject, string textContent, string htmlContent, string email, string? customComment = null)
+        private async Task DispatchEmailAsync(string subject, string textContent, string htmlContent, string email)
         {
             try
             {
-                var emailJsServiceId = _configuration["EmailJs:ServiceId"] 
-                                   ?? _configuration["EmailJsServiceId"] 
-                                   ?? _configuration["EmailJs__ServiceId"] 
+                var emailJsServiceId = _configuration["EmailJs:ServiceId"]
+                                   ?? _configuration["EmailJsServiceId"]
+                                   ?? _configuration["EmailJs__ServiceId"]
                                    ?? "service_oejpd6v";
 
-                var emailJsTemplateId = _configuration["EmailJs:TemplateId"] 
-                                    ?? _configuration["EmailJsTemplateId"] 
+                var emailJsTemplateId = _configuration["EmailJs:TemplateId"]
+                                    ?? _configuration["EmailJsTemplateId"]
                                     ?? _configuration["EmailJs__TemplateId"]
                                     ?? "template_5yp4o4e";
 
-                var emailJsPublicKey = _configuration["EmailJs:PublicKey"] 
-                                   ?? _configuration["EmailJsPublicKey"] 
+                var emailJsPublicKey = _configuration["EmailJs:PublicKey"]
+                                   ?? _configuration["EmailJsPublicKey"]
                                    ?? _configuration["EmailJs__PublicKey"]
                                    ?? "QQWzdMHl281Ejhe-A";
 
-                var emailJsPrivateKey = _configuration["EmailJs:PrivateKey"] 
-                                    ?? _configuration["EmailJsPrivateKey"] 
+                var emailJsPrivateKey = _configuration["EmailJs:PrivateKey"]
+                                    ?? _configuration["EmailJsPrivateKey"]
                                     ?? _configuration["EmailJs__PrivateKey"];
 
-                // 1. Try EmailJS API if PublicKey is provided
+                // 1. Try EmailJS API
                 if (!string.IsNullOrEmpty(emailJsPublicKey))
                 {
                     var emailJsPayload = new Dictionary<string, object>
@@ -81,9 +78,6 @@ namespace apiprojnew.Common
                                 passcode = textContent,
                                 message = textContent,
                                 content = textContent,
-                                comment = customComment ?? "",
-                                admin_comment = customComment ?? "",
-                                reason = customComment ?? "",
                                 subject = subject,
                                 time = DateTime.UtcNow.ToString("g")
                             }
@@ -100,7 +94,7 @@ namespace apiprojnew.Common
                     emailJsRequest.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
                     emailJsRequest.Content = new StringContent(JsonSerializer.Serialize(emailJsPayload), Encoding.UTF8, "application/json");
 
-                    _logger.LogInformation($"[EmailJS API] Sending notification email via service '{emailJsServiceId}' to {email}...");
+                    _logger.LogInformation($"[EmailJS] Sending verification email to {email}...");
                     var emailJsResponse = await _httpClient.SendAsync(emailJsRequest);
                     var emailJsResult = await emailJsResponse.Content.ReadAsStringAsync();
 
@@ -112,7 +106,7 @@ namespace apiprojnew.Common
                     _logger.LogError($"[EmailJS Failed] HTTP {emailJsResponse.StatusCode}: {emailJsResult}");
                 }
 
-                // 2. Fallback: Check Brevo API
+                // 2. Fallback: Brevo API
                 var brevoKey = _configuration["Brevo:ApiKey"] ?? _configuration["BrevoApiKey"] ?? _configuration["Brevo__ApiKey"];
                 if (!string.IsNullOrEmpty(brevoKey) && !brevoKey.Contains("YOUR_"))
                 {
@@ -132,7 +126,7 @@ namespace apiprojnew.Common
                     if (brevoResponse.IsSuccessStatusCode) return;
                 }
 
-                // 3. Fallback: Check Resend API
+                // 3. Fallback: Resend API
                 var resendKey = _configuration["Resend:ApiKey"] ?? _configuration["ResendApiKey"] ?? _configuration["Resend__ApiKey"];
                 if (!string.IsNullOrEmpty(resendKey) && !resendKey.Contains("YOUR_"))
                 {
