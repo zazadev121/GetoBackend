@@ -304,7 +304,12 @@ namespace apiprojnew.Services.Admin
                 if (oldPhase != phase)
                 {
                     // SendPhaseNotificationEmail(user, oldPhase, phase, comment);
-                    await _pushService.SendToUserAsync(userId, GetPhasePushTitle(phase), GetPhasePushBody(phase), "/dashboard");
+                    string pushBody = GetPhasePushBody(phase);
+                    if (!string.IsNullOrWhiteSpace(comment))
+                    {
+                        pushBody += $" | {comment.Trim()}";
+                    }
+                    await _pushService.SendToUserAsync(userId, GetPhasePushTitle(phase), pushBody, "/dashboard");
                 }
 
                 return Result<string>.Ok($"User phase updated to {phase}");
