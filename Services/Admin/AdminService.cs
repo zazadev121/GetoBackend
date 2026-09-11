@@ -303,7 +303,7 @@ namespace apiprojnew.Services.Admin
 
                 if (oldPhase != phase)
                 {
-                    SendPhaseNotificationEmail(user, oldPhase, phase, comment);
+                    // SendPhaseNotificationEmail(user, oldPhase, phase, comment);
                     await _pushService.SendToUserAsync(userId, GetPhasePushTitle(phase), GetPhasePushBody(phase), "/dashboard");
                 }
 
