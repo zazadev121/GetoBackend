@@ -34,13 +34,9 @@ namespace apiprojnew.Common
 
         public void SendNotificationEmailAsync(string subject, string htmlContent, string plainTextMessage, string recipientEmail, string? customComment = null)
         {
-            _logger.LogInformation($"[NOTIFICATION EMAIL FOR {recipientEmail}]: Subject: '{subject}' | Message: {plainTextMessage}");
-            Console.WriteLine($"[NOTIFICATION EMAIL FOR {recipientEmail}]: Subject: '{subject}' | Message: {plainTextMessage}");
-
-            Task.Run(async () =>
-            {
-                await DispatchEmailAsync(subject, plainTextMessage, htmlContent, recipientEmail, customComment);
-            });
+            // Notification emails (phase/status/document) are DISABLED — push notifications only.
+            _logger.LogInformation($"[NOTIFICATION EMAIL SUPPRESSED for {recipientEmail}]: Subject: '{subject}' — no email sent.");
+            Console.WriteLine($"[NOTIFICATION EMAIL SUPPRESSED for {recipientEmail}]: Subject: '{subject}' — no email sent.");
         }
 
         private async Task DispatchEmailAsync(string subject, string textContent, string htmlContent, string email, string? customComment = null)
