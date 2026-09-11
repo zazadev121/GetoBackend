@@ -74,7 +74,7 @@ namespace apiprojnew.Services.Users
             {
                 return Result<int>.BadRequest("Password is required");
             }
-            if (req.phonenumber == null)
+            if (string.IsNullOrWhiteSpace(req.phonenumber))
             {
                 return Result<int>.BadRequest("Phone number is required");
             }
