@@ -406,9 +406,9 @@ namespace apiprojnew.Services.Admin
 
         private static string GetPhasePushBody(UserPahse phase) => phase switch
         {
-            UserPahse.phaseone      => "I ეტაპი: გთხოვთ ატვირთოთ თქვენი რეზიუმე (CV).",
-            UserPahse.phasetwo      => "II ეტაპი: ჩამოტვირთეთ ხელშეკრულება, შეავსეთ და ატვირთეთ PDF-ად.",
-            UserPahse.phasethree    => "III ეტაპი: გადმოგეცემათ სამუშაო ნებართვა. ეწვიეთ კაბინეტს.",
+            UserPahse.phaseone      => "გთხოვთ, ატვირთოთ თქვენი რეზიუმე (CV).\n\nCV-ის ატვირთვის შემდეგ გამოგეგზავნებათ ხელშეკრულება ხელმოსაწერად",
+            UserPahse.phasetwo      => "გთხოვთ, გაეცნოთ იანვარში წარმოსადგენი დოკუმენტების ნუსხას და მოამზადოთ ყველა საჭირო დოკუმენტი",
+            UserPahse.phasethree    => "გთხოვთ, ხელი მოაწეროთ ხელშეკრულებას.\n\nხელმოწერის შემდეგ სამუშაო ნებართვა აგეტვირთებათ თქვენს პროფილში.",
             UserPahse.phaseCanceled => "თქვენი ეტაპი გაუქმებულია. კითხვებისთვის დაგვიკავშირდით.",
             _                       => "თქვენი ეტაპი განახლდა."
         };
