@@ -124,7 +124,9 @@ using (var scope = app.Services.CreateScope())
         @"ALTER TABLE ""News"" ADD COLUMN IF NOT EXISTS ""LinksJson"" text NULL;",
         @"ALTER TABLE ""News"" ADD COLUMN IF NOT EXISTS ""TitleEn"" text NULL;",
         @"ALTER TABLE ""News"" ADD COLUMN IF NOT EXISTS ""TextEn"" text NULL;",
-        @"ALTER TABLE ""Vacancies"" ADD COLUMN IF NOT EXISTS ""Salary"" text NULL;"
+        @"ALTER TABLE ""Vacancies"" ADD COLUMN IF NOT EXISTS ""Salary"" text NULL;",
+        @"ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""MaxFileSizeMb"" integer NOT NULL DEFAULT 25;",
+        @"ALTER TABLE users ADD COLUMN IF NOT EXISTS ""MaxFileSizeMb"" integer NOT NULL DEFAULT 25;"
     };
 
     foreach (var sql in alterStatements)

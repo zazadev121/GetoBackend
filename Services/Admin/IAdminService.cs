@@ -15,9 +15,10 @@ namespace apiprojnew.Services.Admin
         Task<Result<List<UserWithDocumentsDTO>>> SearchUsersByNameAsync(string name);
         Task<Result<UserWithDocumentsDTO>> GetUserWithDocumentsByIdAsync(int userId);
         
-        // User Status and Phase Management
+        // User Status, Phase and Max File Size Limit Management
         Task<Result<string>> UpdateUserStatusAsync(int userId, userstatus status, string? comment = null);
         Task<Result<string>> UpdateUserPhaseAsync(int userId, UserPahse phase, string? comment = null);
+        Task<Result<string>> UpdateUserMaxFileSizeAsync(int userId, int maxFileSizeMb);
         
         // Admin Download User Documents
         Task<Result<byte[]>> DownloadUserDocumentAsync(int documentId, int userId);

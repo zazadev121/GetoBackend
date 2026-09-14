@@ -163,6 +163,18 @@ namespace apiprojnew.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        [HttpPut("users/{userId}/max-file-size")]
+        public async Task<IActionResult> UpdateUserMaxFileSize(int userId, [FromQuery] int maxFileSizeMb)
+        {
+            if (!CheckAdminAccess())
+            {
+                return Forbid();
+            }
+
+            var response = await _adminService.UpdateUserMaxFileSizeAsync(userId, maxFileSizeMb);
+            return StatusCode(response.StatusCode, response);
+        }
+
         [HttpDelete("users/{userId}")]
         public async Task<IActionResult> DeleteUserWithDocuments(int userId)
         {

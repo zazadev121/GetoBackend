@@ -1,4 +1,4 @@
-﻿using apiprojnew.Enum;
+using apiprojnew.Enum;
 
 namespace apiprojnew.DTO
 {
@@ -13,6 +13,7 @@ namespace apiprojnew.DTO
         public userstatus Status { get; set; }
         public UserPahse UserPhase { get; set; }
         public bool IsVerified { get; set; }
+        public int MaxFileSizeMb { get; set; } = 25;
         public List<DocumentDTO> Documents { get; set; } = new List<DocumentDTO>();
     }
 }

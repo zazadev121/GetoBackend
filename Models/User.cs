@@ -1,4 +1,4 @@
-﻿using apiprojnew.Enum;
+using apiprojnew.Enum;
 using System.Reflection.Metadata;
 
 namespace apiprojnew.Models
@@ -16,6 +16,7 @@ namespace apiprojnew.Models
         public UserPahse UserPahse { get; set; }
         public bool IsVerified { get; set; }
         public string? VerifyCode { get; set; }
+        public int MaxFileSizeMb { get; set; } = 25;
         public List<Document> Documents { get; set; } = new List<Document>();
         
 

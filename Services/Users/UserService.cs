@@ -198,6 +198,7 @@ namespace apiprojnew.Services.Users
                 Status = user.Status,
                 UserPhase = user.UserPahse,
                 IsVerified = user.IsVerified,
+                MaxFileSizeMb = user.MaxFileSizeMb <= 0 ? 25 : user.MaxFileSizeMb,
                 Documents = documents
             };
 

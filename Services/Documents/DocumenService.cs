@@ -54,10 +54,13 @@ namespace apiprojnew.Services.Documents
                 return Result<int>.BadRequest("No file provided");
             }
 
-            // Check file size
-            if (file.Length > MaxFileSize)
+            // Check file size limit for this user (default 25 MB if not configured)
+            int userLimitMb = user.MaxFileSizeMb > 0 ? user.MaxFileSizeMb : 25;
+            long maxSizeBytes = (long)userLimitMb * 1024 * 1024;
+
+            if (file.Length > maxSizeBytes)
             {
-                return Result<int>.BadRequest("File size exceeds 10 MB limit");
+                return Result<int>.BadRequest($"File size exceeds maximum limit of {userLimitMb} MB");
             }
 
             // Check file extension

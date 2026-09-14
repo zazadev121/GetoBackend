@@ -253,6 +253,31 @@ namespace apiprojnew.Services.Admin
             }
         }
 
+        public async Task<Result<string>> UpdateUserMaxFileSizeAsync(int userId, int maxFileSizeMb)
+        {
+            try
+            {
+                var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                if (user == null)
+                    return Result<string>.NotFound("User not found");
+
+                if (maxFileSizeMb <= 0)
+                {
+                    maxFileSizeMb = 25; // Default fallback
+                }
+
+                user.MaxFileSizeMb = maxFileSizeMb;
+                _db.Users.Update(user);
+                await _db.SaveChangesAsync();
+
+                return Result<string>.Ok($"User max file size limit updated to {maxFileSizeMb} MB");
+            }
+            catch (Exception ex)
+            {
+                return Result<string>.BadRequest($"Error updating user max file size: {ex.Message}");
+            }
+        }
+
         public async Task<Result<string>> DeleteUserWithDocumentsAsync(int userId)
         {
             try
@@ -374,6 +399,7 @@ namespace apiprojnew.Services.Admin
                 Status = user.Status,
                 UserPhase = user.UserPahse,
                 IsVerified = user.IsVerified,
+                MaxFileSizeMb = user.MaxFileSizeMb <= 0 ? 25 : user.MaxFileSizeMb,
                 Documents = documents
             };
         }
