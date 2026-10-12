@@ -42,7 +42,10 @@ namespace apiprojnew.Controllers
             var endpoint = isGroq
                 ? "https://api.groq.com/openai/v1/chat/completions"
                 : "https://api.openai.com/v1/chat/completions";
-            var model = isGroq ? "llama-3.3-70b-versatile" : "gpt-4o-mini";
+            var customModel = _config["Ai:Model"] ?? Environment.GetEnvironmentVariable("AI_MODEL");
+            var model = !string.IsNullOrWhiteSpace(customModel)
+                ? customModel
+                : (isGroq ? "llama-3.1-8b-instant" : "gpt-4o-mini");
 
             var systemPrompt = @"You are a helpful assistant for GETO Project — a Georgian student employment program in Germany.
 You help Georgian students with questions about:
