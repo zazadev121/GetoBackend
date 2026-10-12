@@ -24,13 +24,17 @@ namespace apiprojnew.Controllers
             if (string.IsNullOrWhiteSpace(request?.Message))
                 return BadRequest(new { error = "Message is required" });
 
-            var apiKey = _config["OpenAI:ApiKey"]
-                ?? _config["OpenAI__ApiKey"]
-                ?? _config["OPENAI_API_KEY"]
-                ?? Environment.GetEnvironmentVariable("OpenAI__ApiKey")
-                ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-            if (string.IsNullOrWhiteSpace(apiKey))
-                return StatusCode(500, new { error = "AI service not configured" });
+            var apiKey = _config["OpenAI:ApiKey"];
+            if (string.IsNullOrWhiteSpace(apiKey) || apiKey == "YOUR_OPENAI_API_KEY_HERE")
+            {
+                apiKey = _config["OpenAI__ApiKey"]
+                    ?? _config["OPENAI_API_KEY"]
+                    ?? Environment.GetEnvironmentVariable("OpenAI__ApiKey")
+                    ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+            }
+
+            if (string.IsNullOrWhiteSpace(apiKey) || apiKey == "YOUR_OPENAI_API_KEY_HERE")
+                return StatusCode(500, new { error = "AI service not configured: OpenAI API key missing. Add OpenAI__ApiKey to Render environment variables." });
 
             var systemPrompt = @"You are a helpful assistant for GETO Project — a Georgian student employment program in Germany.
 You help Georgian students with questions about:
