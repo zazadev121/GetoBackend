@@ -24,17 +24,25 @@ namespace apiprojnew.Controllers
             if (string.IsNullOrWhiteSpace(request?.Message))
                 return BadRequest(new { error = "Message is required" });
 
-            var apiKey = _config["OpenAI:ApiKey"];
-            if (string.IsNullOrWhiteSpace(apiKey) || apiKey == "YOUR_OPENAI_API_KEY_HERE")
-            {
-                apiKey = _config["OpenAI__ApiKey"]
-                    ?? _config["OPENAI_API_KEY"]
-                    ?? Environment.GetEnvironmentVariable("OpenAI__ApiKey")
-                    ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-            }
+            var apiKey = _config["Groq:ApiKey"]
+                ?? _config["Groq__ApiKey"]
+                ?? _config["GROQ_API_KEY"]
+                ?? _config["OpenAI:ApiKey"]
+                ?? _config["OpenAI__ApiKey"]
+                ?? _config["OPENAI_API_KEY"]
+                ?? Environment.GetEnvironmentVariable("Groq__ApiKey")
+                ?? Environment.GetEnvironmentVariable("GROQ_API_KEY")
+                ?? Environment.GetEnvironmentVariable("OpenAI__ApiKey")
+                ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
 
             if (string.IsNullOrWhiteSpace(apiKey) || apiKey == "YOUR_OPENAI_API_KEY_HERE")
-                return StatusCode(500, new { error = "AI service not configured: OpenAI API key missing. Add OpenAI__ApiKey to Render environment variables." });
+                return StatusCode(500, new { error = "AI service not configured: API key missing." });
+
+            bool isGroq = apiKey.StartsWith("gsk_", StringComparison.OrdinalIgnoreCase);
+            var endpoint = isGroq
+                ? "https://api.groq.com/openai/v1/chat/completions"
+                : "https://api.openai.com/v1/chat/completions";
+            var model = isGroq ? "llama-3.3-70b-versatile" : "gpt-4o-mini";
 
             var systemPrompt = @"You are a helpful assistant for GETO Project — a Georgian student employment program in Germany.
 You help Georgian students with questions about:
@@ -67,7 +75,7 @@ Always respond concisely and helpfully. If the user writes in Georgian, respond 
 
             var payload = new
             {
-                model = "gpt-4o-mini",
+                model,
                 messages,
                 max_tokens = 500,
                 temperature = 0.7
@@ -81,7 +89,7 @@ Always respond concisely and helpfully. If the user writes in Georgian, respond 
 
             try
             {
-                var response = await client.PostAsync("https://api.openai.com/v1/chat/completions", content);
+                var response = await client.PostAsync(endpoint, content);
                 var responseBody = await response.Content.ReadAsStringAsync();
 
                 if (!response.IsSuccessStatusCode)
