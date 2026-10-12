@@ -10,6 +10,7 @@ namespace apiprojnew.Models
         public string StoredFileName { get; set; } = string.Empty;
         public long FileSize { get; set; }
         public string ContentType { get; set; } = string.Empty;
+        public byte[]? FileData { get; set; }
         public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
         public News? News { get; set; }
     }

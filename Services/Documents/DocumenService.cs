@@ -186,7 +186,6 @@ namespace apiprojnew.Services.Documents
 
         public async Task<Result<List<DocumentDTO>>> GetUserVisibleDocumentsAsync(int userId)
         {
-            // Get the user and their current phase
             var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
             if (user == null)
             {
@@ -195,9 +194,8 @@ namespace apiprojnew.Services.Documents
 
             try
             {
-                // Get all documents that match the user's current phase
                 var documents = await _db.Documents
-                    .Where(d => d.Phase == user.UserPahse)
+                    .Where(d => d.UserId == userId)
                     .OrderByDescending(d => d.UploadedAt)
                     .Select(d => new DocumentDTO
                     {
@@ -212,12 +210,6 @@ namespace apiprojnew.Services.Documents
                     .ToListAsync();
 
                 var dedupedDocuments = DeduplicateDocuments(documents);
-
-                if (!dedupedDocuments.Any())
-                {
-                    return Result<List<DocumentDTO>>.NotFound($"No documents found for your current phase ({user.UserPahse})");
-                }
-
                 return Result<List<DocumentDTO>>.Ok(dedupedDocuments);
             }
             catch (Exception ex)
@@ -228,7 +220,6 @@ namespace apiprojnew.Services.Documents
 
         public async Task<Result<List<DocumentDTO>>> GetAdminDocumentsByUserPhaseAsync(int userId)
         {
-            // Get the user and their current phase
             var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
             if (user == null)
             {
@@ -237,9 +228,8 @@ namespace apiprojnew.Services.Documents
 
             try
             {
-                // Get all documents that match the user's current phase
                 var documents = await _db.Documents
-                    .Where(d => d.Phase == user.UserPahse)
+                    .Where(d => d.IsAdminUploaded && (d.UserId == userId || d.UserId == 0))
                     .OrderByDescending(d => d.UploadedAt)
                     .Select(d => new DocumentDTO
                     {
@@ -254,12 +244,6 @@ namespace apiprojnew.Services.Documents
                     .ToListAsync();
 
                 var dedupedDocuments = DeduplicateDocuments(documents);
-
-                if (!dedupedDocuments.Any())
-                {
-                    return Result<List<DocumentDTO>>.NotFound($"No documents found for your current phase ({user.UserPahse})");
-                }
-
                 return Result<List<DocumentDTO>>.Ok(dedupedDocuments);
             }
             catch (Exception ex)
@@ -270,20 +254,18 @@ namespace apiprojnew.Services.Documents
 
         public async Task<Result<byte[]>> GetAdminDocumentAsync(int documentId, int userId)
         {
-            // Get the user and their current phase
             var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
             if (user == null)
             {
                 return Result<byte[]>.BadRequest("User not found");
             }
 
-            // Get document only if it matches user's phase
             var document = await _db.Documents.FirstOrDefaultAsync(d => 
-                d.Id == documentId && d.Phase == user.UserPahse);
+                d.Id == documentId && (d.UserId == userId || d.IsAdminUploaded));
             
             if (document == null)
             {
-                return Result<byte[]>.NotFound("Document not found or not available for your current phase");
+                return Result<byte[]>.NotFound("Document not found or you don't have access to it");
             }
 
             return Result<byte[]>.Ok(document.FileData);

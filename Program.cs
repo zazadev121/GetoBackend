@@ -126,7 +126,11 @@ using (var scope = app.Services.CreateScope())
         @"ALTER TABLE ""News"" ADD COLUMN IF NOT EXISTS ""TextEn"" text NULL;",
         @"ALTER TABLE ""Vacancies"" ADD COLUMN IF NOT EXISTS ""Salary"" text NULL;",
         @"ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""MaxFileSizeMb"" integer NOT NULL DEFAULT 25;",
-        @"ALTER TABLE users ADD COLUMN IF NOT EXISTS ""MaxFileSizeMb"" integer NOT NULL DEFAULT 25;"
+        @"ALTER TABLE users ADD COLUMN IF NOT EXISTS ""MaxFileSizeMb"" integer NOT NULL DEFAULT 25;",
+        @"ALTER TABLE ""NewsAttachments"" ADD COLUMN IF NOT EXISTS ""FileData"" bytea NULL;",
+        @"ALTER TABLE newsattachments ADD COLUMN IF NOT EXISTS ""FileData"" bytea NULL;",
+        @"ALTER TABLE ""VacancyAttachments"" ADD COLUMN IF NOT EXISTS ""FileData"" bytea NULL;",
+        @"ALTER TABLE vacancyattachments ADD COLUMN IF NOT EXISTS ""FileData"" bytea NULL;"
     };
 
     foreach (var sql in alterStatements)
@@ -151,6 +155,7 @@ using (var scope = app.Services.CreateScope())
                 ""StoredFileName"" text NOT NULL,
                 ""FileSize"" bigint NOT NULL,
                 ""ContentType"" text NOT NULL,
+                ""FileData"" bytea NULL,
                 ""UploadedAt"" timestamp with time zone NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
                 CONSTRAINT ""PK_NewsAttachments"" PRIMARY KEY (""Id""),
                 CONSTRAINT ""FK_NewsAttachments_News_NewsId"" FOREIGN KEY (""NewsId"") REFERENCES ""News"" (""Id"") ON DELETE CASCADE
@@ -173,6 +178,7 @@ using (var scope = app.Services.CreateScope())
                 ""StoredFileName"" text NOT NULL,
                 ""FileSize"" bigint NOT NULL,
                 ""ContentType"" text NOT NULL,
+                ""FileData"" bytea NULL,
                 ""UploadedAt"" timestamp with time zone NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
                 CONSTRAINT ""PK_VacancyAttachments"" PRIMARY KEY (""Id""),
                 CONSTRAINT ""FK_VacancyAttachments_Vacancies_VacancyId"" FOREIGN KEY (""VacancyId"") REFERENCES ""Vacancies"" (""Id"") ON DELETE CASCADE

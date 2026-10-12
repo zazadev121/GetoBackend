@@ -184,14 +184,26 @@ namespace apiprojnew.Services.Vacancies
                 if (file.Length > maxSize)
                     return Result<VacancyAttachmentDto>.BadRequest("File size exceeds 20MB limit");
 
-                var uploadsDir = UploadsDir();
-                Directory.CreateDirectory(uploadsDir);
+                byte[] fileBytes;
+                using (var ms = new MemoryStream())
+                {
+                    await file.CopyToAsync(ms);
+                    fileBytes = ms.ToArray();
+                }
 
                 var storedFileName = $"{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
-                var filePath = Path.Combine(uploadsDir, storedFileName);
 
-                using (var stream = File.Create(filePath))
-                    await file.CopyToAsync(stream);
+                try
+                {
+                    var uploadsDir = UploadsDir();
+                    Directory.CreateDirectory(uploadsDir);
+                    var filePath = Path.Combine(uploadsDir, storedFileName);
+                    await File.WriteAllBytesAsync(filePath, fileBytes);
+                }
+                catch
+                {
+                    // Best effort disk cache
+                }
 
                 var attachment = new VacancyAttachment
                 {
@@ -199,7 +211,8 @@ namespace apiprojnew.Services.Vacancies
                     FileName = file.FileName,
                     StoredFileName = storedFileName,
                     FileSize = file.Length,
-                    ContentType = file.ContentType,
+                    ContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+                    FileData = fileBytes,
                     UploadedAt = DateTime.UtcNow
                 };
 
@@ -248,11 +261,33 @@ namespace apiprojnew.Services.Vacancies
             var attachment = await _context.VacancyAttachments.FindAsync(attachmentId);
             if (attachment == null) return null;
 
-            var filePath = Path.Combine(UploadsDir(), attachment.StoredFileName);
-            if (!File.Exists(filePath)) return null;
+            var contentType = string.IsNullOrWhiteSpace(attachment.ContentType) ? "application/octet-stream" : attachment.ContentType;
 
-            var stream = File.OpenRead(filePath);
-            return (stream, attachment.FileName, attachment.ContentType);
+            if (attachment.FileData != null && attachment.FileData.Length > 0)
+            {
+                var stream = new MemoryStream(attachment.FileData);
+                return (stream, attachment.FileName, contentType);
+            }
+
+            var searchDirs = new[]
+            {
+                UploadsDir(),
+                Path.Combine(_env.ContentRootPath, "Uploads", UploadFolder),
+                Path.Combine(Directory.GetCurrentDirectory(), "Uploads", UploadFolder),
+                Path.Combine(AppContext.BaseDirectory, "Uploads", UploadFolder)
+            };
+
+            foreach (var dir in searchDirs)
+            {
+                var filePath = Path.Combine(dir, attachment.StoredFileName);
+                if (File.Exists(filePath))
+                {
+                    var stream = File.OpenRead(filePath);
+                    return (stream, attachment.FileName, contentType);
+                }
+            }
+
+            return null;
         }
 
         private string UploadsDir() =>

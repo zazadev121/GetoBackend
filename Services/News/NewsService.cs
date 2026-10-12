@@ -177,14 +177,26 @@ namespace apiprojnew.Services.News
                 if (file.Length > maxSize)
                     return Result<NewsAttachmentDto>.BadRequest("File size exceeds 20MB limit");
 
-                var uploadsDir = Path.Combine(_env.WebRootPath ?? _env.ContentRootPath, "Uploads", "news-attachments");
-                Directory.CreateDirectory(uploadsDir);
+                byte[] fileBytes;
+                using (var ms = new MemoryStream())
+                {
+                    await file.CopyToAsync(ms);
+                    fileBytes = ms.ToArray();
+                }
 
                 var storedFileName = $"{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
-                var filePath = Path.Combine(uploadsDir, storedFileName);
 
-                using (var stream = File.Create(filePath))
-                    await file.CopyToAsync(stream);
+                try
+                {
+                    var uploadsDir = Path.Combine(_env.WebRootPath ?? _env.ContentRootPath, "Uploads", "news-attachments");
+                    Directory.CreateDirectory(uploadsDir);
+                    var filePath = Path.Combine(uploadsDir, storedFileName);
+                    await File.WriteAllBytesAsync(filePath, fileBytes);
+                }
+                catch
+                {
+                    // Best effort disk cache
+                }
 
                 var attachment = new NewsAttachment
                 {
@@ -192,7 +204,8 @@ namespace apiprojnew.Services.News
                     FileName = file.FileName,
                     StoredFileName = storedFileName,
                     FileSize = file.Length,
-                    ContentType = file.ContentType,
+                    ContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+                    FileData = fileBytes,
                     UploadedAt = DateTime.UtcNow
                 };
 
@@ -241,13 +254,33 @@ namespace apiprojnew.Services.News
             var attachment = await _context.NewsAttachments.FindAsync(attachmentId);
             if (attachment == null) return null;
 
-            var uploadsDir = Path.Combine(_env.WebRootPath ?? _env.ContentRootPath, "Uploads", "news-attachments");
-            var filePath = Path.Combine(uploadsDir, attachment.StoredFileName);
+            var contentType = string.IsNullOrWhiteSpace(attachment.ContentType) ? "application/octet-stream" : attachment.ContentType;
 
-            if (!File.Exists(filePath)) return null;
+            if (attachment.FileData != null && attachment.FileData.Length > 0)
+            {
+                var stream = new MemoryStream(attachment.FileData);
+                return (stream, attachment.FileName, contentType);
+            }
 
-            var stream = File.OpenRead(filePath);
-            return (stream, attachment.FileName, attachment.ContentType);
+            var searchDirs = new[]
+            {
+                Path.Combine(_env.WebRootPath ?? _env.ContentRootPath, "Uploads", "news-attachments"),
+                Path.Combine(_env.ContentRootPath, "Uploads", "news-attachments"),
+                Path.Combine(Directory.GetCurrentDirectory(), "Uploads", "news-attachments"),
+                Path.Combine(AppContext.BaseDirectory, "Uploads", "news-attachments")
+            };
+
+            foreach (var dir in searchDirs)
+            {
+                var filePath = Path.Combine(dir, attachment.StoredFileName);
+                if (File.Exists(filePath))
+                {
+                    var stream = File.OpenRead(filePath);
+                    return (stream, attachment.FileName, contentType);
+                }
+            }
+
+            return null;
         }
 
         private void DeleteStoredFile(string storedFileName)
