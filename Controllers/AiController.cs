@@ -18,24 +18,41 @@ namespace apiprojnew.Controllers
             _httpClientFactory = httpClientFactory;
         }
 
+        [HttpGet("models")]
+        public async Task<IActionResult> GetModels()
+        {
+            var apiKey = GetApiKey();
+            if (string.IsNullOrWhiteSpace(apiKey))
+                return BadRequest(new { error = "No API key configured" });
+
+            bool isGroq = apiKey.StartsWith("gsk_", StringComparison.OrdinalIgnoreCase);
+            var endpoint = isGroq
+                ? "https://api.groq.com/openai/v1/models"
+                : "https://api.openai.com/v1/models";
+
+            var client = _httpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+
+            try
+            {
+                var response = await client.GetAsync(endpoint);
+                var content = await response.Content.ReadAsStringAsync();
+                return Content(content, "application/json");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
         [HttpPost("chat")]
         public async Task<IActionResult> Chat([FromBody] ChatRequestDto request)
         {
             if (string.IsNullOrWhiteSpace(request?.Message))
                 return BadRequest(new { error = "Message is required" });
 
-            var apiKey = _config["Groq:ApiKey"]
-                ?? _config["Groq__ApiKey"]
-                ?? _config["GROQ_API_KEY"]
-                ?? _config["OpenAI:ApiKey"]
-                ?? _config["OpenAI__ApiKey"]
-                ?? _config["OPENAI_API_KEY"]
-                ?? Environment.GetEnvironmentVariable("Groq__ApiKey")
-                ?? Environment.GetEnvironmentVariable("GROQ_API_KEY")
-                ?? Environment.GetEnvironmentVariable("OpenAI__ApiKey")
-                ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-
-            if (string.IsNullOrWhiteSpace(apiKey) || apiKey == "YOUR_OPENAI_API_KEY_HERE")
+            var apiKey = GetApiKey();
+            if (string.IsNullOrWhiteSpace(apiKey))
                 return StatusCode(500, new { error = "AI service not configured: API key missing." });
 
             bool isGroq = apiKey.StartsWith("gsk_", StringComparison.OrdinalIgnoreCase);
@@ -43,9 +60,6 @@ namespace apiprojnew.Controllers
                 ? "https://api.groq.com/openai/v1/chat/completions"
                 : "https://api.openai.com/v1/chat/completions";
             var customModel = _config["Ai:Model"] ?? Environment.GetEnvironmentVariable("AI_MODEL");
-            var model = !string.IsNullOrWhiteSpace(customModel)
-                ? customModel
-                : (isGroq ? "llama-3.1-8b-instant" : "gpt-4o-mini");
 
             var systemPrompt = @"You are a helpful assistant for GETO Project — a Georgian student employment program in Germany.
 You help Georgian students with questions about:
@@ -76,41 +90,94 @@ Always respond concisely and helpfully. If the user writes in Georgian, respond 
 
             messages.Add(new { role = "user", content = request.Message });
 
-            var payload = new
-            {
-                model,
-                messages,
-                max_tokens = 500,
-                temperature = 0.7
-            };
-
             var client = _httpClientFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
-            var json = JsonSerializer.Serialize(payload);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var candidateModels = new List<string>();
+            if (!string.IsNullOrWhiteSpace(customModel)) candidateModels.Add(customModel);
 
-            try
+            if (isGroq)
             {
-                var response = await client.PostAsync(endpoint, content);
-                var responseBody = await response.Content.ReadAsStringAsync();
-
-                if (!response.IsSuccessStatusCode)
-                    return StatusCode(500, new { error = "AI service error", details = responseBody });
-
-                using var doc = JsonDocument.Parse(responseBody);
-                var reply = doc.RootElement
-                    .GetProperty("choices")[0]
-                    .GetProperty("message")
-                    .GetProperty("content")
-                    .GetString();
-
-                return Ok(new { reply });
+                candidateModels.AddRange(new[] {
+                    "llama-3.3-70b-versatile",
+                    "llama-3.1-8b-instant",
+                    "gemma2-9b-it",
+                    "mixtral-8x7b-32768",
+                    "llama3-8b-8192",
+                    "llama3-70b-8192"
+                });
             }
-            catch (Exception ex)
+            else
             {
-                return StatusCode(500, new { error = "Request failed", details = ex.Message });
+                candidateModels.Add("gpt-4o-mini");
             }
+
+            string? lastError = null;
+
+            foreach (var model in candidateModels.Distinct())
+            {
+                var payload = new
+                {
+                    model,
+                    messages,
+                    max_tokens = 500,
+                    temperature = 0.7
+                };
+
+                var json = JsonSerializer.Serialize(payload);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                try
+                {
+                    var response = await client.PostAsync(endpoint, content);
+                    var responseBody = await response.Content.ReadAsStringAsync();
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        using var doc = JsonDocument.Parse(responseBody);
+                        var reply = doc.RootElement
+                            .GetProperty("choices")[0]
+                            .GetProperty("message")
+                            .GetProperty("content")
+                            .GetString();
+
+                        return Ok(new { reply });
+                    }
+
+                    lastError = responseBody;
+
+                    // If it's not a model availability error, don't keep trying other models
+                    if (!responseBody.Contains("model_not_found"))
+                    {
+                        return StatusCode(500, new { error = "AI service error", details = responseBody });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return StatusCode(500, new { error = "Request failed", details = ex.Message });
+                }
+            }
+
+            return StatusCode(500, new { error = "AI service error", details = lastError });
+        }
+
+        private string? GetApiKey()
+        {
+            var apiKey = _config["Groq:ApiKey"]
+                ?? _config["Groq__ApiKey"]
+                ?? _config["GROQ_API_KEY"]
+                ?? _config["OpenAI:ApiKey"]
+                ?? _config["OpenAI__ApiKey"]
+                ?? _config["OPENAI_API_KEY"]
+                ?? Environment.GetEnvironmentVariable("Groq__ApiKey")
+                ?? Environment.GetEnvironmentVariable("GROQ_API_KEY")
+                ?? Environment.GetEnvironmentVariable("OpenAI__ApiKey")
+                ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+
+            if (string.IsNullOrWhiteSpace(apiKey) || apiKey == "YOUR_OPENAI_API_KEY_HERE")
+                return null;
+
+            return apiKey.Trim();
         }
     }
 
