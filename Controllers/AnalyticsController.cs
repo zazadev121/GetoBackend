@@ -39,7 +39,7 @@ public class AnalyticsController : ControllerBase
         var projectId = _configuration["VERCEL_ANALYTICS_PROJECT_ID"] ?? DefaultProjectId;
         var teamId = _configuration["VERCEL_ANALYTICS_TEAM_ID"] ?? DefaultTeamId;
         var commonQuery = $"projectId={Uri.EscapeDataString(projectId)}&teamId={Uri.EscapeDataString(teamId)}";
-        var since = DateTime.UtcNow.Date.AddDays(-29).ToString("yyyy-MM-dd");
+        var since = DateTime.UtcNow.Date.AddDays(-14).ToString("yyyy-MM-dd");
         var until = DateTime.UtcNow.Date.ToString("yyyy-MM-dd");
         var baseUrl = "https://api.vercel.com/v1/query/web-analytics/visits/";
 
@@ -47,9 +47,9 @@ public class AnalyticsController : ControllerBase
         {
             var client = _httpClientFactory.CreateClient();
             client.Timeout = TimeSpan.FromSeconds(15);
-            using var count = await QueryAsync(client, token, $"{baseUrl}count?{commonQuery}", cancellationToken);
+            using var count = await QueryAsync(client, token, $"{baseUrl}count?{commonQuery}&since={since}&until={until}", cancellationToken);
             using var daily = await QueryAsync(client, token,
-                $"{baseUrl}aggregate?{commonQuery}&by=day&since={since}&until={until}&limit=30", cancellationToken);
+                $"{baseUrl}aggregate?{commonQuery}&by=day&since={since}&until={until}&limit=15", cancellationToken);
             using var pages = await QueryAsync(client, token,
                 $"{baseUrl}aggregate?{commonQuery}&by=requestPath&since={since}&until={until}&limit=6", cancellationToken);
 
