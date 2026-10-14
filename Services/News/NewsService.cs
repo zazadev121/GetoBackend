@@ -3,6 +3,7 @@ using apiprojnew.Data;
 using apiprojnew.DTO;
 using apiprojnew.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 using System.Text.Json;
 
 namespace apiprojnew.Services.News
@@ -177,6 +178,10 @@ namespace apiprojnew.Services.News
                 if (file.Length > maxSize)
                     return Result<NewsAttachmentDto>.BadRequest("File size exceeds 20MB limit");
 
+                var photoContentType = NewsPhotoFormats.GetContentType(file.FileName);
+                if (photoContentType == null && file.ContentType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true)
+                    return Result<NewsAttachmentDto>.BadRequest("Photos must be JPEG, PNG, WebP or GIF files");
+
                 byte[] fileBytes;
                 using (var ms = new MemoryStream())
                 {
@@ -184,19 +189,10 @@ namespace apiprojnew.Services.News
                     fileBytes = ms.ToArray();
                 }
 
-                var storedFileName = $"{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
+                if (photoContentType != null && !NewsPhotoFormats.HasValidSignature(fileBytes, photoContentType))
+                    return Result<NewsAttachmentDto>.BadRequest("Invalid photo file");
 
-                try
-                {
-                    var uploadsDir = Path.Combine(_env.WebRootPath ?? _env.ContentRootPath, "Uploads", "news-attachments");
-                    Directory.CreateDirectory(uploadsDir);
-                    var filePath = Path.Combine(uploadsDir, storedFileName);
-                    await File.WriteAllBytesAsync(filePath, fileBytes);
-                }
-                catch
-                {
-                    // Best effort disk cache
-                }
+                var storedFileName = $"{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
 
                 var attachment = new NewsAttachment
                 {
@@ -204,13 +200,40 @@ namespace apiprojnew.Services.News
                     FileName = file.FileName,
                     StoredFileName = storedFileName,
                     FileSize = file.Length,
-                    ContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+                    ContentType = photoContentType ?? (string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType),
                     FileData = fileBytes,
                     UploadedAt = DateTime.UtcNow
                 };
 
-                _context.NewsAttachments.Add(attachment);
-                await _context.SaveChangesAsync();
+                if (photoContentType != null)
+                {
+                    // Serializable isolation prevents concurrent uploads from exceeding the four-photo cap.
+                    await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+                    var existing = await _context.NewsAttachments
+                        .Where(a => a.NewsId == newsId)
+                        .Select(a => new { a.FileName, a.ContentType })
+                        .ToListAsync();
+                    if (existing.Count(a => NewsPhotoFormats.GetContentType(a.FileName) != null ||
+                                            a.ContentType?.StartsWith("image/") == true) >= NewsPhotoFormats.MaxPhotos)
+                        return Result<NewsAttachmentDto>.BadRequest("A news post can have at most 4 photos");
+
+                    _context.NewsAttachments.Add(attachment);
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                }
+                else
+                {
+                    _context.NewsAttachments.Add(attachment);
+                    await _context.SaveChangesAsync();
+                }
+
+                try
+                {
+                    var uploadsDir = Path.Combine(_env.WebRootPath ?? _env.ContentRootPath, "Uploads", "news-attachments");
+                    Directory.CreateDirectory(uploadsDir);
+                    await File.WriteAllBytesAsync(Path.Combine(uploadsDir, storedFileName), fileBytes);
+                }
+                catch { /* Best effort disk cache; the database stores the file. */ }
 
                 return Result<NewsAttachmentDto>.Ok(new NewsAttachmentDto
                 {

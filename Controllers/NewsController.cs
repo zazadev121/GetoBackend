@@ -122,5 +122,23 @@ namespace apiprojnew.Controllers
 
             return File(res.Value.Stream, res.Value.ContentType, res.Value.FileName);
         }
+
+        [HttpGet("attachments/{attachmentId}/view")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ViewPhoto(int attachmentId)
+        {
+            var res = await _newsService.DownloadAttachmentAsync(attachmentId);
+            if (res == null || res.Value.Stream == null) return NotFound();
+
+            var contentType = NewsPhotoFormats.GetContentType(res.Value.FileName);
+            if (contentType == null)
+            {
+                await res.Value.Stream.DisposeAsync();
+                return NotFound();
+            }
+
+            Response.Headers["X-Content-Type-Options"] = "nosniff";
+            return File(res.Value.Stream, contentType);
+        }
     }
 }
